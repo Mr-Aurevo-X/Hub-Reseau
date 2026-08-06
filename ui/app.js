@@ -2,11 +2,11 @@
  * Hub-Reseau shell — Dashboard boot + lazy modules + sidebar collapsible.
  */
 const TITLES = {
-  dashboard: "L'Atelier PC — Réseau",
-  netadmin: "L'Atelier PC — Réseau [NetAdmin]",
-  netmap: "L'Atelier PC — Réseau [NetMap]",
-  roadway: "L'Atelier PC — Réseau [RoadWay-X]",
-  wifikey: "L'Atelier PC — Réseau [WifiKey]",
+  dashboard: "L'Atelier PC Command — Réseau",
+  netadmin: "L'Atelier PC Command — Réseau [NetAdmin]",
+  netmap: "L'Atelier PC Command — Réseau [NetMap]",
+  roadway: "L'Atelier PC Command — Réseau [RoadWay-X]",
+  wifikey: "L'Atelier PC Command — Réseau [WifiKey]",
 };
 
 const cache = Object.create(null);
