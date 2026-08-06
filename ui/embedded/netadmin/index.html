@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html class="hub-inframe" lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NetAdmin — L'Atelier PC Command</title>
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="shell.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="theme-pc-command">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+        <div class="brand-text">
+          <h1>NetAdmin</h1>
+          <p data-i18n="tagline">Réseau admin · local</p>
+        </div>
+      </div>
+      <span class="badge">HUB</span>
+      <div class="feature-desc">
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+        <span data-i18n="features">Réinit. adaptateurs, édition hosts et règles pare-feu — un seul hub.</span>
+      </div>
+      <p class="privacy-note" data-i18n="privacy">Mr-Aurevo-X ne collecte aucune donnée. Outils locaux uniquement.</p>
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+    </aside>
+    <div class="main hub-main">
+      <header class="page-header hub-header">
+        <h2 data-i18n="title">NetAdmin</h2>
+        <p data-i18n="subtitle">L'Atelier Windows — administration réseau</p>
+      </header>
+
+      <nav class="hub-tabs" id="hubTabs" role="tablist" aria-label="NetAdmin">
+        <button type="button" class="hub-tab active" role="tab" data-tab="adapters" aria-selected="true" data-i18n="tabAdapters">Adaptateurs</button>
+        <button type="button" class="hub-tab" role="tab" data-tab="hosts" aria-selected="false" data-i18n="tabHosts">Hosts</button>
+        <button type="button" class="hub-tab" role="tab" data-tab="firewall" aria-selected="false" data-i18n="tabFirewall">Pare-feu</button>
+      </nav>
+
+      <section class="hub-panel active" id="panel-adapters" data-panel="adapters" role="tabpanel">
+        <div class="panel airy">
+          <p class="muted" id="adapterMeta">—</p>
+          <p class="muted" data-i18n="adminHint">Ces actions nécessitent les droits administrateur.</p>
+          <p class="muted" data-i18n="winsockWarn">Winsock : un redémarrage peut être nécessaire après reset.</p>
+          <div class="row actions">
+            <button type="button" class="btn accent" id="btnResetIp" data-i18n="btnResetIp">Reset IP</button>
+            <button type="button" class="btn danger" id="btnResetWinsock" data-i18n="btnResetWinsock">Reset Winsock</button>
+
+          </div>
+          <pre class="result-box" id="adapterOut"></pre>
+        </div>
+      </section>
+
+      <section class="hub-panel" id="panel-hosts" data-panel="hosts" role="tabpanel" hidden>
+        <div class="toolbar">
+          <button type="button" class="btn" id="btnReload" data-i18n="btnReload">Recharger</button>
+          <button type="button" class="btn accent" id="btnSave" data-i18n="btnSave">Enregistrer</button>
+
+          <span class="backup-note" id="backupNote" data-i18n="backupHint">Backup avant écriture dans LocalAppData.</span>
+        </div>
+        <div class="profiles">
+          <label for="profileSelect" data-i18n="profileLabel">Profil</label>
+          <select id="profileSelect"></select>
+          <input type="text" id="profileName" data-i18n-placeholder="profilePh" placeholder="Nom du profil…" maxlength="64" autocomplete="off" />
+          <button type="button" class="btn" id="btnLoadProfile" data-i18n="btnLoadProfile">Charger</button>
+          <button type="button" class="btn" id="btnSaveProfile" data-i18n="btnSaveProfile">Sauver profil</button>
+        </div>
+        <section class="dns-panel" aria-label="DNS">
+          <div class="dns-toolbar">
+            <button type="button" class="btn" id="btnFlushDns" data-i18n="btnFlushDns">Flush DNS</button>
+            <label class="dns-host-field">
+              <span data-i18n="hostLabel">Hostname</span>
+              <input type="text" id="resolveHost" data-i18n-placeholder="hostPh" placeholder="example.com" autocomplete="off" />
+            </label>
+            <button type="button" class="btn" id="btnResolveHost" data-i18n="btnResolveHost">Résoudre</button>
+            <span class="dns-meta" id="dnsMeta"></span>
+          </div>
+          <pre class="dns-out" id="flushOut" hidden></pre>
+          <div class="table-wrap dns-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="thName">Name</th>
+                  <th data-i18n="thType">Type</th>
+                  <th data-i18n="thTtl">TTL</th>
+                  <th data-i18n="thIp">IP / Host</th>
+                </tr>
+              </thead>
+              <tbody id="dnsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+        <p class="meta" id="hostsMeta">—</p>
+        <textarea id="editor" class="hosts-editor" spellcheck="false" autocomplete="off"></textarea>
+      </section>
+
+      <section class="hub-panel" id="panel-firewall" data-panel="firewall" role="tabpanel" hidden>
+        <div class="toolbar">
+          <input type="search" id="fwFilter" data-i18n-placeholder="filterPh" placeholder="Filtrer…" />
+          <button type="button" class="btn accent" id="btnFwRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+          <button type="button" class="btn" id="btnEnable" data-i18n="btnEnable">Activer</button>
+          <button type="button" class="btn" id="btnDisable" data-i18n="btnDisable">Désactiver</button>
+
+        </div>
+        <p class="meta" id="fwMeta">—</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="thFwName">Nom</th>
+                <th data-i18n="thEnabled">Activé</th>
+                <th data-i18n="thDir">Dir</th>
+                <th data-i18n="thAction">Action</th>
+              </tr>
+            </thead>
+            <tbody id="fwTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="status" id="status"></p>
+    </div>
+  </div>
+  <script src="suite-boot.js"></script>
+  <script src="suite-progress.js"></script>
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+    <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('netadmin');</script>
+<script src="app.js"></script>
+</body>
+</html>

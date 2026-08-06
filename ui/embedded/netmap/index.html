@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="hub-inframe" lang="fr">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>NetMap — L'Atelier PC Command</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+<link rel="stylesheet" href="tokens.css" />
+
+  <link rel="stylesheet" href="shell.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="stylesheet" href="progress.css" />
+
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body>
+
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+
+        <div class="brand-text">
+
+          <h1>NetMap</h1>
+
+          <p data-i18n="tagline">Réseau · ports · live</p>
+
+        </div>
+
+      </div>
+
+      <span class="badge">LOCAL</span>
+
+      <div class="feature-desc" id="featureDesc">
+
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+
+        <span data-i18n="features">Connexions, ping/trace, SiteCheck, proxies et partages SMB — hub réseau.</span>
+
+      </div>
+
+      <p class="privacy-note" id="privacyNote" data-privacy-fr="Mr-Aurevo-X ne collecte aucune donnée. Vue locale des connexions uniquement." data-privacy-en="Mr-Aurevo-X does not collect your data. Local connection view only.">Mr-Aurevo-X ne collecte aucune donnée. Vue locale des connexions uniquement.</p>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans Atelier</p>
+
+    </aside>
+
+    <div class="main hub-main">
+
+            <nav class="hub-tabs" role="tablist">
+        <button type="button" class="hub-tab active" data-tab="conn" aria-selected="true">Connexions</button>
+        <button type="button" class="hub-tab" data-tab="ping" aria-selected="false">Ping / Trace</button>
+        <button type="button" class="hub-tab" data-tab="site" aria-selected="false">SiteCheck</button>
+        <button type="button" class="hub-tab" data-tab="proxy" aria-selected="false">Proxy</button>
+        <button type="button" class="hub-tab" data-tab="shares" aria-selected="false">Partages</button>
+      </nav>
+      <section class="hub-panel active" data-panel="conn">
+<header class="page-header">
+
+        <h2 data-i18n="title">Connexions</h2>
+
+        <p id="meta" data-i18n="loading">Chargement…</p>
+
+      </header>
+
+
+
+      <section class="port-panel" aria-label="Port check">
+
+        <div class="section-head port-head">
+
+          <h3 data-i18n="portPanelTitle">Port Check</h3>
+
+          <span class="port-badge" id="probeBadge" hidden></span>
+
+        </div>
+
+        <div class="port-toolbar">
+
+          <label class="field port-field port-host-field">
+
+            <span data-i18n="hostLabel">Hôte</span>
+
+            <input type="text" id="probeHost" value="127.0.0.1" data-i18n-placeholder="hostPh" placeholder="127.0.0.1 ou example.com" autocomplete="off" />
+
+          </label>
+
+          <label class="field port-field">
+
+            <span data-i18n="portLabel">Port</span>
+
+            <input type="number" id="portCheck" min="1" max="65535" value="80" />
+
+          </label>
+
+          <button type="button" class="btn accent" id="btnPortCheck" data-i18n="btnPortCheck">Vérifier TCP</button>
+
+          <span class="port-meta" id="portMeta"></span>
+
+        </div>
+
+        <div class="table-wrap port-table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th data-i18n="thLocal">Local</th>
+
+                <th data-i18n="thRemote">Distant</th>
+
+                <th data-i18n="thStatus">Statut</th>
+
+                <th data-i18n="thPid">PID</th>
+
+                <th data-i18n="thProc">Processus</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="portTbody"></tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+
+
+      <div class="toolbar">
+
+        <input type="search" id="filter" data-i18n-placeholder="filterPh" placeholder="Filtrer processus / IP / port…" autocomplete="off" />
+
+        <label class="chk"><input type="checkbox" id="listenOnly" /> <span data-i18n="listenOnly">Listen only</span></label>
+
+        <label class="chk"><input type="checkbox" id="autoRefresh" /> <span data-i18n="autoRefresh">Auto</span></label>
+
+        <button type="button" class="btn accent" id="btnRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+
+        <button type="button" class="btn" id="btnExport" disabled data-i18n="btnExport">Export CSV</button>
+
+        <button type="button" class="btn" id="btnOpen" disabled data-i18n="btnOpen">Dossier</button>
+
+      </div>
+
+      <div class="table-wrap live-table-wrap">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th data-i18n="thProto">Proto</th>
+
+              <th data-i18n="thLocal">Local</th>
+
+              <th data-i18n="thRemote">Distant</th>
+
+              <th data-i18n="thStatus">Statut</th>
+
+              <th data-i18n="thPid">PID</th>
+
+              <th data-i18n="thName">Nom</th>
+
+              <th data-i18n="thPath">Chemin</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="tbody"></tbody>
+
+        </table>
+
+      </div>
+
+            <div class="progress-row" id="progressRow" hidden>
+
+        <span id="progressLabel" class="progress-label"></span>
+
+        <div class="progress" id="progress"><i id="progressBar"></i></div>
+
+      </div>
+
+      <p class="status" id="status"></p>
+      </section>
+
+      <section class="hub-panel" data-panel="ping" hidden>
+        <div class="hub-toolbar">
+          <label class="field grow"><span>Hote</span><input id="pingHost" value="1.1.1.1" /></label>
+          <button type="button" class="btn accent" id="btnPingGo">Lancer</button>
+        </div>
+        <pre class="hub-pre" id="pingOut">—</pre>
+        <p class="status" id="pingStatus"></p>
+      </section>
+      <section class="hub-panel" data-panel="site" hidden>
+        <div class="hub-toolbar">
+          <label class="field grow"><span>URL</span><input id="siteUrl" placeholder="https://example.com" /></label>
+          <button type="button" class="btn accent" id="btnSiteCheck">Verifier</button>
+          <button type="button" class="btn" id="btnSiteFavs">Favoris</button>
+          <button type="button" class="btn" id="btnSiteHist">Historique</button>
+        </div>
+        <pre class="hub-pre" id="siteOut">—</pre>
+        <p class="status" id="siteStatus"></p>
+      </section>
+      <section class="hub-panel" data-panel="proxy" hidden>
+        <div class="hub-toolbar">
+          <button type="button" class="btn accent" id="btnProxyRead">Lire proxies</button>
+          <button type="button" class="btn" id="btnProxyClear">Effacer env user</button>
+        </div>
+        <div class="hub-toolbar">
+          <label class="field grow"><span>HTTP_PROXY</span><input id="proxyHttp" /></label>
+          <label class="field grow"><span>HTTPS_PROXY</span><input id="proxyHttps" /></label>
+          <label class="field grow"><span>NO_PROXY</span><input id="proxyNo" /></label>
+          <button type="button" class="btn" id="btnProxySet">Appliquer env user</button>
+        </div>
+        <pre class="hub-pre" id="proxyOut">—</pre>
+        <p class="status" id="proxyStatus"></p>
+      </section>
+      <section class="hub-panel" data-panel="shares" hidden>
+        <div class="hub-toolbar">
+          <button type="button" class="btn accent" id="btnSharesRefresh">Lister partages</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Nom</th><th>Chemin</th><th>Description</th><th>Etat</th>
+        </tr></thead><tbody id="sharesBody"></tbody></table></div>
+        <p class="status" id="sharesStatus"></p>
+      </section>
+
+    </div>
+
+  </div>
+<script src="suite-boot.js"></script>
+
+  <script src="suite-progress.js"></script>
+
+    <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+    <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('netmap');</script>
+<script src="app.js"></script>
+  <script src="hub.js"></script>
+
+</body>
+
+</html>
+

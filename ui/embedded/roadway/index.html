@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="hub-inframe" lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RoadWay-X</title>
+  <link rel="stylesheet" href="vendor/pc-command-kit/fonts/kit-fonts.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/reset.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/base.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/shell.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/settings-panel.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="progress.css" />
+</head>
+<body class="theme-pc-command" data-tool-title="RoadWay-X" data-tool-subtitle="Mr-Aurevo-X Lab">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+        <div class="brand-text">
+          <h1>RoadWay-X</h1>
+          <p data-i18n="tagline">Trafic · alertes · live</p>
+        </div>
+      </div>
+      <span class="badge">LOCAL</span>
+      <div class="feature-desc">
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+        <span data-i18n="features">Débit, flux, heuristiques, apprentissage et lookups opt-in — jamais de blocage auto.</span>
+      </div>
+      <div class="sidebar-stats" id="sidebarStats">
+        <div><span>↓</span> <strong id="statDown">—</strong></div>
+        <div><span>↑</span> <strong id="statUp">—</strong></div>
+        <div><span data-i18n="statConn">Flux</span> <strong id="statConn">0</strong></div>
+        <div><span data-i18n="statAlerts">Alertes</span> <strong id="statAlerts">0</strong></div>
+        <div><span data-i18n="statQuiz">À trancher</span> <strong id="statQuiz">0</strong></div>
+      </div>
+      <p class="privacy-note" id="privacyNote">Monitoring local. Lookups externes opt-in. Aucun blocage automatique.</p>
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · hors Suite · CGU dans Atelier</p>
+    </aside>
+
+    <div class="main hub-main">
+      <nav class="hub-tabs" role="tablist">
+        <button type="button" class="hub-tab active" data-tab="live" aria-selected="true" data-i18n="tabLive">Live</button>
+        <button type="button" class="hub-tab" data-tab="quiz" aria-selected="false" data-i18n="tabQuiz">À trancher</button>
+        <button type="button" class="hub-tab" data-tab="alerts" aria-selected="false" data-i18n="tabAlerts">Alertes</button>
+        <button type="button" class="hub-tab" data-tab="rules" aria-selected="false" data-i18n="tabRules">Règles</button>
+      </nav>
+
+      <section class="hub-panel active" data-panel="live">
+        <header class="page-header">
+          <div>
+            <h2 data-i18n="liveTitle">Trafic en direct</h2>
+            <p id="liveMeta" data-i18n="loading">Chargement…</p>
+          </div>
+          <div class="toolbar">
+            <label class="check"><input type="checkbox" id="chkAuto" checked /><span data-i18n="auto">Auto</span></label>
+            <input type="search" id="filterLive" data-i18n-placeholder="filterPh" placeholder="Filtrer…" />
+            <button type="button" class="btn" id="btnRefresh" data-i18n="refresh">Actualiser</button>
+            <button type="button" class="btn ghost" id="btnExportJson" data-i18n="exportJson">Export JSON</button>
+            <button type="button" class="btn ghost" id="btnExportCsv" data-i18n="exportCsv">Export CSV</button>
+            <button type="button" class="btn ghost" id="btnOpenNetMap" data-i18n="openNetMap">NetMap</button>
+          </div>
+        </header>
+        <div class="chip-row" id="filterChips">
+          <button type="button" class="chip active" data-filter="all">All</button>
+          <button type="button" class="chip" data-filter="outbound">Outbound</button>
+          <button type="button" class="chip" data-filter="listen">Listen</button>
+          <button type="button" class="chip" data-filter="loose">Loose</button>
+          <button type="button" class="chip" data-filter="alerted">Alerted</button>
+        </div>
+        <div class="bw-panel">
+          <canvas id="bwChart" width="900" height="72"></canvas>
+          <div class="bw-legend">
+            <span class="leg down" data-i18n="legendDown">Descendant</span>
+            <span class="leg up" data-i18n="legendUp">Montant</span>
+            <span id="rateSource" class="hint"></span>
+          </div>
+        </div>
+        <div class="split">
+          <div class="table-wrap live-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="colProcess">Processus</th>
+                  <th data-i18n="colProto">Proto</th>
+                  <th data-i18n="colLocal">Local</th>
+                  <th data-i18n="colRemote">Distant</th>
+                  <th>CC</th>
+                  <th data-i18n="colStatus">État</th>
+                  <th data-i18n="colRate">Débit*</th>
+                </tr>
+              </thead>
+              <tbody id="liveBody"></tbody>
+            </table>
+          </div>
+          <aside class="tops-panel">
+            <h3 data-i18n="topsTitle">Top processus</h3>
+            <ul id="topsList"></ul>
+            <h3 data-i18n="dnsTitle">DNS récent</h3>
+            <ul id="dnsList" class="dns-list"></ul>
+            <p class="hint" id="rateHint" data-i18n="rateHint">* Débit processus = I/O Windows (approx.) sauf ETW.</p>
+          </aside>
+        </div>
+        <div id="ctxMenu" class="ctx-menu" hidden>
+          <button type="button" data-act="trust">Faire confiance</button>
+          <button type="button" data-act="folder">Ouvrir dossier</button>
+          <button type="button" data-act="kill">Terminer (confirm)…</button>
+          <button type="button" data-act="block">Bloquer IP (confirm)…</button>
+          <button type="button" data-act="rep">Lookup réputation</button>
+          <button type="button" data-act="pcap">Capture pcap…</button>
+        </div>
+      </section>
+
+      <section class="hub-panel" data-panel="quiz">
+        <header class="page-header">
+          <div>
+            <h2 data-i18n="quizTitle">À trancher</h2>
+            <p id="quizMeta" data-i18n="quizSub">Apprentissage — aucune action réseau sans confirmation</p>
+          </div>
+          <div class="toolbar">
+            <button type="button" class="btn accent" id="btnLearn" data-i18n="startLearn">Apprendre 10 min</button>
+            <button type="button" class="btn ghost" id="btnStopLearn" data-i18n="stopLearn">Stop</button>
+          </div>
+        </header>
+        <div id="learnBanner" class="learn-banner" hidden>Apprentissage actif…</div>
+        <div class="quiz-feed" id="quizFeed"></div>
+      </section>
+
+      <section class="hub-panel" data-panel="alerts">
+        <header class="page-header">
+          <div>
+            <h2 data-i18n="alertsTitle">Alertes</h2>
+            <p id="alertsMeta"></p>
+          </div>
+          <div class="toolbar">
+            <label class="check"><input type="checkbox" id="chkToasts" checked /><span data-i18n="toasts">Toasts</span></label>
+            <button type="button" class="btn ghost" id="btnExportAlerts">Export alertes</button>
+            <button type="button" class="btn" id="btnClearAlerts" data-i18n="clearAlerts">Vider</button>
+          </div>
+        </header>
+        <div class="alerts-feed" id="alertsFeed"></div>
+      </section>
+
+      <section class="hub-panel" data-panel="rules">
+        <header class="page-header">
+          <div>
+            <h2 data-i18n="rulesTitle">Règles & réglages</h2>
+            <p data-i18n="rulesSub">Seuils, trust, lookups opt-in, startup</p>
+          </div>
+          <div class="toolbar">
+            <button type="button" class="btn" id="btnSaveRules" data-i18n="saveRules">Enregistrer</button>
+            <button type="button" class="btn ghost" id="btnOpenData" data-i18n="openData">Données</button>
+          </div>
+        </header>
+        <div class="rules-list" id="rulesList"></div>
+        <div class="settings-grid">
+          <div class="blocklist-panel">
+            <h3 data-i18n="thresholdsTitle">Seuils</h3>
+            <label class="field">Pic débit (B/s) <input type="number" id="thrBps" value="8000000" /></label>
+            <label class="field">Facteur baseline <input type="number" id="thrFactor" step="0.1" value="4" /></label>
+            <label class="field">Fan-out destinations <input type="number" id="thrFanout" value="25" /></label>
+            <label class="field">Ports communs (csv) <input type="text" id="thrPorts" placeholder="80,443,53…" /></label>
+          </div>
+          <div class="blocklist-panel">
+            <h3 data-i18n="blocklistTitle">Blocklist</h3>
+            <textarea id="blocklistText" rows="6" spellcheck="false"></textarea>
+            <button type="button" class="btn accent" id="btnSaveBlocklist" data-i18n="saveBlocklist">Sauver blocklist</button>
+          </div>
+          <div class="blocklist-panel">
+            <h3>Trust</h3>
+            <ul id="trustList" class="trust-list"></ul>
+          </div>
+          <div class="blocklist-panel">
+            <h3 data-i18n="repTitle">Réputation (opt-in)</h3>
+            <label class="check"><input type="checkbox" id="chkRep" /><span>Activer lookups externes</span></label>
+            <label class="field">AbuseIPDB key <input type="password" id="abuseKey" autocomplete="off" /></label>
+            <button type="button" class="btn" id="btnSaveRep">Sauver réputation</button>
+            <p class="hint" id="geoHint"></p>
+            <p class="hint" id="capHint"></p>
+          </div>
+          <div class="blocklist-panel">
+            <h3>Démarrage Windows</h3>
+            <label class="check"><input type="checkbox" id="chkStartup" /><span>Lancer au démarrage (tray)</span></label>
+            <button type="button" class="btn" id="btnSaveStartup">Appliquer startup</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div id="confirmModal" class="modal" hidden>
+    <div class="modal-card">
+      <h3 id="confirmTitle">Confirmer</h3>
+      <p id="confirmBody"></p>
+      <div class="toolbar">
+        <button type="button" class="btn accent" id="confirmOk">Confirmer</button>
+        <button type="button" class="btn ghost" id="confirmCancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <script src="vendor/pc-command-kit/components/settings-panel.js"></script>
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="suite-boot.js"></script>
+  <script src="suite-progress.js"></script>
+    <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('roadway');</script>
+<script src="app.js"></script>
+</body>
+</html>
