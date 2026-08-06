@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>L'Atelier PC — Réseau</title>
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+  <link rel="stylesheet" href="fonts/fonts.css" />
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="hub.css" />
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="theme-pc-command">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="hub-shell" id="hubShell">
+    <aside class="hub-sidebar" id="hubSidebar" aria-label="Navigation hub">
+      <div class="hub-brand">
+        <img class="hub-brand-mark" src="app-icon.svg" width="36" height="36" alt="" />
+        <div class="hub-brand-text">
+          <strong>Réseau</strong>
+          <span>L'Atelier PC</span>
+        </div>
+      </div>
+
+      <nav class="hub-nav" id="hubNav" role="navigation">
+        <button type="button" class="hub-nav-item is-active" data-view="dashboard" data-tooltip="Accueil" title="Accueil" aria-current="page">
+          <span class="hub-nav-ico" aria-hidden="true">⌂</span>
+          <span class="hub-nav-label">Accueil</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="netadmin" data-tooltip="NetAdmin" title="NetAdmin">
+          <span class="hub-nav-ico" aria-hidden="true">⌬</span>
+          <span class="hub-nav-label">NetAdmin</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="netmap" data-tooltip="NetMap" title="NetMap">
+          <span class="hub-nav-ico" aria-hidden="true">⌖</span>
+          <span class="hub-nav-label">NetMap</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="roadway" data-tooltip="RoadWay" title="RoadWay">
+          <span class="hub-nav-ico" aria-hidden="true">↗</span>
+          <span class="hub-nav-label">RoadWay</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="wifikey" data-tooltip="WifiKey" title="WifiKey">
+          <span class="hub-nav-ico" aria-hidden="true">≋</span>
+          <span class="hub-nav-label">WifiKey</span>
+        </button>
+      </nav>
+
+      <div class="hub-sidebar-foot">
+        <button type="button" class="hub-collapse-btn" id="btnCollapse" aria-expanded="true" title="Réduire la barre">
+          <span class="hub-nav-ico" aria-hidden="true">◂</span>
+          <span class="hub-nav-label">Réduire</span>
+        </button>
+        <p class="hub-privacy" id="privacyNote">Mr-Aurevo-X ne collecte aucune donnée. Outils locaux uniquement.</p>
+      </div>
+    </aside>
+
+    <main class="hub-main" id="hubMain">
+      <div class="hub-view is-enter" id="hubView" data-view="dashboard"></div>
+    </main>
+  </div>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="suite-boot.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
