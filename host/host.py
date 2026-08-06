@@ -1,4 +1,4 @@
-"""Hub-Reseau — host WebView2 (Vague H1 / Couche A)."""
+"""Hub-Reseau — host WebView2 (Vague H2 Couche B)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,9 @@ _HOST_DIR = Path(__file__).resolve().parent
 if str(_HOST_DIR) not in sys.path:
     sys.path.insert(0, str(_HOST_DIR))
 
+from api_modules import NetAdminApi, NetMapApi, WifiKeyApi  # noqa: E402
+from api_roadway import RoadwayApi  # noqa: E402
+from security import ConfirmGate  # noqa: E402
 from suite_launch import (  # noqa: E402
     launch_suite_app,
     resolve_suite_accent,
@@ -22,8 +25,8 @@ from suite_launch import (  # noqa: E402
 from window_chrome import WindowChromeMixin, create_tool_window  # noqa: E402
 
 HUB_TITLE = "L'Atelier PC — Réseau"
-DEFAULT_WIDTH = 1120
-DEFAULT_HEIGHT = 740
+DEFAULT_WIDTH = 1180
+DEFAULT_HEIGHT = 780
 
 
 def app_dir() -> Path:
@@ -64,24 +67,33 @@ def _ps_json(script: str, timeout: int = 20) -> Any:
     out = (proc.stdout or "").strip()
     if not out:
         return None
-    import json as _json
+    import json
 
     try:
-        return _json.loads(out)
-    except _json.JSONDecodeError:
+        return json.loads(out)
+    except json.JSONDecodeError:
         return {"raw": out, "returncode": proc.returncode}
 
 
 class DashboardApi:
-    """Lecture seule — aucun mutator."""
-
     def __init__(self, hub: "Api") -> None:
         self._hub = hub
 
     def get_kpis(self) -> dict:
-        base = {"ok": True, "admin": is_admin(), "partial": False}
+        base: dict[str, Any] = {"ok": True, "admin": is_admin(), "partial": False}
         try:
-            data = _ps_json("$ErrorActionPreference='SilentlyContinue'\n$nics = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up')\n$tcp = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue)\n[pscustomobject]@{\n  nicUp = $nics.Count\n  nicNames = @($nics | Select-Object -First 3 -ExpandProperty Name) -join ', '\n  tcpEstablished = $tcp.Count\n} | ConvertTo-Json -Compress\n")
+            data = _ps_json(
+                r"""
+$ErrorActionPreference='SilentlyContinue'
+$nics = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up')
+$tcp = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue)
+[pscustomobject]@{
+  nicUp = $nics.Count
+  nicNames = @($nics | Select-Object -First 3 -ExpandProperty Name) -join ', '
+  tcpEstablished = $tcp.Count
+} | ConvertTo-Json -Compress
+"""
+            )
             if isinstance(data, dict):
                 base.update(data)
         except Exception as exc:  # noqa: BLE001
@@ -93,63 +105,47 @@ class DashboardApi:
         return {"ok": True, "modules": self._hub.module_catalog()}
 
 
-class LaunchModuleApi:
-    """Couche A — lance les apps Atelier/Lab siblings."""
-
-    def __init__(self, hub: "Api", module_id: str, apps: list[str]) -> None:
-        self._hub = hub
-        self.module_id = module_id
-        self.apps = list(apps)
-
-    def list_apps(self) -> dict:
-        return {"ok": True, "module": self.module_id, "apps": self.apps}
-
-    def open_app(self, name: str = "") -> dict:
-        name = (name or "").strip()
-        if name not in self.apps:
-            return {"ok": False, "error": f"App hors module {self.module_id}: {name}"}
-        return launch_suite_app(name)
-
-
 class Api(WindowChromeMixin):
     def __init__(self) -> None:
         self._window: Any = None
         self._maximized = False
+        self._confirm = ConfirmGate(ttl_seconds=90.0)
         self.dashboard = DashboardApi(self)
-        self.netadmin = LaunchModuleApi(self, "netadmin", ["NetAdmin"])
-        self.netmap = LaunchModuleApi(self, "netmap", ["NetMap"])
-        self.roadway = LaunchModuleApi(self, "roadway", ["RoadWay-X"])
-        self.wifikey = LaunchModuleApi(self, "wifikey", ["WifiKey"])
+        self.netadmin = NetAdminApi(self._confirm)
+        self.netmap = NetMapApi(self._confirm)
+        self.wifikey = WifiKeyApi(self._confirm)
+        self.roadway = RoadwayApi()
 
     def set_window(self, window: Any) -> None:
         WindowChromeMixin.set_window(self, window)
+        # RoadWay tray/window helpers may need the HWND
+        try:
+            self.roadway._window = window  # noqa: SLF001
+        except Exception:  # noqa: BLE001
+            pass
 
     def module_catalog(self) -> list[dict]:
         return [
-{
-    "id": "netadmin",
-    "label": "NetAdmin",
-    "desc": "Adaptateurs, hosts, firewall",
-    "apps": self.netadmin.apps,
-},
-{
-    "id": "netmap",
-    "label": "NetMap",
-    "desc": "Connexions TCP/UDP ↔ PID",
-    "apps": self.netmap.apps,
-},
-{
-    "id": "roadway",
-    "label": "RoadWay-X",
-    "desc": "Trafic live NIC / alertes",
-    "apps": self.roadway.apps,
-},
-{
-    "id": "wifikey",
-    "label": "WifiKey",
-    "desc": "Profils et clés Wi-Fi",
-    "apps": self.wifikey.apps,
-},
+            {
+                "id": "netadmin",
+                "label": "NetAdmin",
+                "desc": "Adaptateurs, hosts, firewall (in-process)",
+            },
+            {
+                "id": "netmap",
+                "label": "NetMap",
+                "desc": "Connexions TCP/UDP · ping · proxy · partages",
+            },
+            {
+                "id": "roadway",
+                "label": "RoadWay-X",
+                "desc": "Trafic live · alertes · règles",
+            },
+            {
+                "id": "wifikey",
+                "label": "WifiKey",
+                "desc": "Profils Wi-Fi et clés (ConfirmGate)",
+            },
         ]
 
     def get_suite_accent(self) -> dict:

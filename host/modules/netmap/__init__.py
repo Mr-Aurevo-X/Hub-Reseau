@@ -1,0 +1,1 @@
+"""Hub absorbed modules."""
