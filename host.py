@@ -62,6 +62,33 @@ def _relaunch_as_admin() -> bool:
         return False
 
 
+
+def _start_hub_metrics(api: Api) -> None:
+    """Embedded localhost metrics for Accueil live dashboard."""
+    try:
+        from backend.metrics_server import start_metrics_server
+    except Exception as exc:  # noqa: BLE001
+        print(f"[metrics] import failed: {exc}")
+        return
+    host, port = "127.0.0.1", 8765
+    try:
+        host, port = start_metrics_server(host, port)
+    except OSError:
+        try:
+            host, port = start_metrics_server("127.0.0.1", 0)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[metrics] bind failed: {exc}")
+            return
+    except Exception as exc:  # noqa: BLE001
+        print(f"[metrics] start failed: {exc}")
+        return
+    if hasattr(api, "set_metrics_endpoint"):
+        api.set_metrics_endpoint(host, port)
+    else:
+        api._metrics_host = host
+        api._metrics_port = int(port)
+
+
 def main() -> None:
     if not is_admin():
         if _relaunch_as_admin():
@@ -71,6 +98,7 @@ def main() -> None:
     if not index.is_file():
         raise SystemExit(f"UI introuvable: {index}")
     api = Api()
+    _start_hub_metrics(api)
     create_tool_window(
         title=HUB_TITLE,
         url=index.as_uri(),
