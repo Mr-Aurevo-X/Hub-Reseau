@@ -13,6 +13,7 @@ const TITLES = {
 
 const cache = Object.create(null);
 let currentView    = "dashboard";
+let currentDash    = null;
 let currentSegment = "";
 
 function apiRoot() {

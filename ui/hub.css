@@ -454,12 +454,12 @@ body {
   background: transparent;
 }
 
-/* Frameless titlebar: hub-shell must flex under tool-titlebar (else main pane collapses / looks empty) */
-body.frameless:not(.pcd-embed) .hub-shell {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
+/* Frameless titlebar: shell fills under tool-titlebar; #hubView must not collapse to 0 */
+body.frameless:not(.pcd-embed) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 body.frameless:not(.pcd-embed) > .bg {
@@ -467,6 +467,40 @@ body.frameless:not(.pcd-embed) > .bg {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* Do not consume flex space when body is a column flex container */
+  flex: 0 0 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+}
+body.frameless:not(.pcd-embed) .hub-shell {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--hub-sidebar-w, 232px) 1fr;
+}
+body.frameless:not(.pcd-embed) .hub-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+body.frameless:not(.pcd-embed) #hubView,
+body.frameless:not(.pcd-embed) .hub-main > .hub-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .hub-view > .hub-inhub,
