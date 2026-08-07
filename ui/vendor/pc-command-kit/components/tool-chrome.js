@@ -56,15 +56,24 @@
     const titleEl = document.getElementById("toolTitleText");
     if (titleEl && !titleEl.dataset.locked) {
       const name = toolLabel();
+      // data-tool-subtitle="" → no subtitle (hubs use full title alone).
+      // Absent attribute → default brand for standalone tools.
+      const rawSubAttr =
+        document.body && document.body.hasAttribute("data-tool-subtitle")
+          ? document.body.getAttribute("data-tool-subtitle")
+          : null;
       const sub =
-        ((document.body && document.body.getAttribute("data-tool-subtitle")) || "").trim() ||
-        "L'Atelier PC Command";
-      const safeSub = String(sub)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-      titleEl.innerHTML = name + " <em>" + safeSub + "</em>";
+        rawSubAttr === null ? "PC Command" : String(rawSubAttr || "").trim();
+      if (sub) {
+        const safeSub = String(sub)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        titleEl.innerHTML = name + " <em>" + safeSub + "</em>";
+      } else {
+        titleEl.textContent = name;
+      }
     }
 
     if (!document.querySelector(".tool-resize-edges")) {

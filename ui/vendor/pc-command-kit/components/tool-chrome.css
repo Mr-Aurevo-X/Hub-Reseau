@@ -46,7 +46,8 @@ body.frameless:not(.pcd-embed) .tool-titlebar {
 
 /* Win over app styles.css `.shell { height: 100vh }` which would clip under titlebar. */
 body.frameless:not(.pcd-embed) .shell,
-body.frameless:not(.pcd-embed) .app-shell {
+body.frameless:not(.pcd-embed) .app-shell,
+body.frameless:not(.pcd-embed) .hub-shell {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   height: auto !important;

@@ -312,7 +312,7 @@ class NetMapApi:
         return launch_suite_app("NetMap")
 
 
-HUB_TITLE = "L'Atelier PC Command — Réseau"
+HUB_TITLE = "PC Command | Network"
 from window_chrome import WindowChromeMixin  # noqa: E402
 from api_roadway import RoadwayApi  # noqa: E402
 

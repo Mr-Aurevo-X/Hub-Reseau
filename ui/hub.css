@@ -453,3 +453,30 @@ body {
   border: 0;
   background: transparent;
 }
+
+/* Frameless titlebar: hub-shell must flex under tool-titlebar (else main pane collapses / looks empty) */
+body.frameless:not(.pcd-embed) .hub-shell {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden;
+}
+body.frameless:not(.pcd-embed) > .bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hub-view > .hub-inhub,
+.hub-view > .hub-module-panel,
+.hub-view > .hub-uninstx {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+.hub-view[data-view="dashboard"] {
+  overflow: auto;
+  display: block;
+}
