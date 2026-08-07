@@ -1,7 +1,7 @@
 /**
  * Hub-Reseau shell — Dashboard boot + lazy modules + sidebar collapsible.
  */
-const HUB_NAME = "PC Command | Network";
+const HUB_NAME = "L'Atelier PC Command — Réseau";
 
 const TITLES = {
   dashboard: HUB_NAME,

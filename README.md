@@ -1,17 +1,15 @@
 # Hub-Reseau — L'Atelier PC Command
 
-Hub catégorie **Réseau** — **Vague H2 Couche B** (fusion in-process).
+Hub catégorie — Couche B + H7 native + flatten `host.py` / `backend/`.
 
 ## Modules
 
-| Module | Source fusionnée | ConfirmGate |
-|--------|------------------|-------------|
-| NetAdmin | NetAdmin | reset IP/Winsock, hosts, firewall, flush DNS |
-| NetMap | NetMap | proxy env set/clear |
-| RoadWay-X | Lab/RoadWay-X | kill process, block IP, startup |
-| WifiKey | WifiKey | révélation clé Wi‑Fi |
-
-Dashboard = KPIs lecture seule. Fallback « Fenêtre dédiée » via `suite_launch` encore disponible.
+| Module | Rôle |
+|--------|------|
+| NetAdmin | Adaptateurs, hosts, firewall |
+| NetMap | Connexions · ping · proxy · partages |
+| RoadWay-X | Trafic live · alertes |
+| WifiKey | Profils Wi-Fi (ConfirmGate) |
 
 ## Lancer
 
@@ -19,4 +17,17 @@ Dashboard = KPIs lecture seule. Fallback « Fenêtre dédiée » via `suite_laun
 Lancer.cmd
 ```
 
-Nécessite `pywebview` + `psutil`.
+Nécessite Python + `pywebview` (+ deps hub). Admin hérité du launcher ; UAC aussi dans `main()`.
+
+## Structure
+
+```text
+host.py                 # entry + UAC + webview
+backend/
+  bridge.py             # Api + namespaces
+  security.py / window_chrome.py / suite_launch.py
+  tools/                # logique métier
+ui/                     # pas de ui/embedded/
+```
+
+Titres HWND : `L'Atelier PC Command — Réseau` / `[Module|Segment]`.

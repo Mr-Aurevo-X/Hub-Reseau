@@ -1,7 +1,7 @@
 /**
  * Shared UninstX-grade in-hub helpers — native DOM only (no iframe).
  */
-import { apiNs, esc } from "./_hub_util.js";
+import { apiNs, esc } from "../_hub_util.js";
 
 export { apiNs, esc };
 

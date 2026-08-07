@@ -1,0 +1,86 @@
+"""Hub-Reseau — entry WebView2 (flatten: host.py + backend/)."""
+
+from __future__ import annotations
+
+import ctypes
+import sys
+from pathlib import Path
+
+import webview
+
+_HUB_ROOT = Path(__file__).resolve().parent
+_BACKEND = _HUB_ROOT / "backend"
+for _p in (_HUB_ROOT, _BACKEND):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+from backend.bridge import HUB_TITLE, Api  # noqa: E402
+from window_chrome import create_tool_window  # noqa: E402
+
+DEFAULT_WIDTH = 1180
+DEFAULT_HEIGHT = 780
+
+
+def app_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return _HUB_ROOT
+
+
+def ui_dir() -> Path:
+    external = app_dir() / "ui"
+    if (external / "index.html").is_file():
+        return external
+    if getattr(sys, "frozen", False):
+        base = Path(getattr(sys, "_MEIPASS", app_dir()))
+        nested = base / "ui"
+        return nested if nested.is_dir() else base
+    return app_dir() / "ui"
+
+
+def is_admin() -> bool:
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def _relaunch_as_admin() -> bool:
+    """Relaunch elevated via UAC. True if elevated process started."""
+    try:
+        frozen = bool(getattr(sys, "frozen", False))
+        executable = sys.executable
+        if frozen:
+            params = " ".join(f'"{a}"' for a in sys.argv[1:])
+        else:
+            script = str(Path(sys.argv[0]).resolve())
+            rest = " ".join(f'"{a}"' for a in sys.argv[1:])
+            params = f'"{script}"' + (f" {rest}" if rest else "")
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", executable, params, None, 1)
+        return int(rc) > 32
+    except Exception:
+        return False
+
+
+def main() -> None:
+    if not is_admin():
+        if _relaunch_as_admin():
+            raise SystemExit(0)
+        raise SystemExit(f"{HUB_TITLE} nécessite les droits administrateur.")
+    index = ui_dir() / "index.html"
+    if not index.is_file():
+        raise SystemExit(f"UI introuvable: {index}")
+    api = Api()
+    create_tool_window(
+        title=HUB_TITLE,
+        url=index.as_uri(),
+        js_api=api,
+        width=DEFAULT_WIDTH,
+        height=DEFAULT_HEIGHT,
+        background_color="#06070c",
+    )
+    webview.start()
+
+
+if __name__ == "__main__":
+    main()
