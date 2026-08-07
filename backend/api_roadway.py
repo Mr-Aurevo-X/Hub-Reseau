@@ -11,6 +11,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+try:
+    import webview
+except ImportError:  # pragma: no cover
+    webview = None  # type: ignore[assignment]
+
 
 _HOST_DIR = Path(__file__).resolve().parent
 if str(_HOST_DIR) not in sys.path:
@@ -504,7 +509,7 @@ class RoadwayApi:
         return self._save_dialog(content, filename)
 
     def _save_dialog(self, content: str, filename: str) -> dict:
-        if self._window is not None and hasattr(self._window, "create_file_dialog"):
+        if webview is not None and self._window is not None and hasattr(self._window, "create_file_dialog"):
             try:
                 result = self._window.create_file_dialog(
                     webview.SAVE_DIALOG,

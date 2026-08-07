@@ -1,14 +1,19 @@
 /**
- * NetMap — native in-hub (no iframe).
+ * NetMap — native in-hub (no iframe). SoT: AtelierWindows/NetMap
  * Bridge: pywebview.api.netmap.*
  * Segments: Connexions | Outils réseau | Proxy | Partages
+ * SoT wire: export_csv · check_port · open_path · tcp_probe
  */
 import { mountModuleShell, waitNs, esc } from "./_in_hub.js";
 
+function skelRows(n = 5) {
+  return Array.from({ length: n }, () => `<div class="hub-skel" style="height:28px;margin:6px 10px;border-radius:6px"></div>`).join("");
+}
+
 export async function mount(root) {
-  const { body, setStatus, askConfirm } = mountModuleShell(root, {
+  const { body, setStatus, askConfirm, setSegment } = mountModuleShell(root, {
     title: "NetMap",
-    subtitle: "Connexions TCP/UDP · ping · proxy · partages",
+    subtitle: "Connexions TCP/UDP · ping · port check · export · proxy · partages",
     segments: [
       { id: "connections", label: "Connexions" },
       { id: "tools",       label: "Outils réseau" },
@@ -24,6 +29,7 @@ export async function mount(root) {
 
   let connsData = [];
   let connsFilter = "";
+  let selected = null;
 
   async function buildConnections() {
     body.innerHTML = `
@@ -33,11 +39,14 @@ export async function mount(root) {
             <input type="search" id="nmSearch" placeholder="Filtrer par proto, adresse, processus, PID…" autocomplete="off" />
           </div>
           <button type="button" class="btn accent" id="nmRefresh">Actualiser</button>
+          <button type="button" class="btn ghost" id="nmExport" disabled>Export CSV</button>
+          <button type="button" class="btn ghost" id="nmOpenPath" disabled>Ouvrir dossier</button>
         </div>
         <p class="meta" id="nmMeta"></p>
       </div>
       <div class="panel flex-fill" style="padding:0">
-        <div class="empty-state" id="nmEmpty">Chargement des connexions réseau…</div>
+        <div id="nmSkel">${skelRows(6)}</div>
+        <div class="empty-state" id="nmEmpty" hidden>Chargement des connexions réseau…</div>
         <div class="table-wrap" id="nmWrap" hidden>
           <table class="data">
             <thead><tr>
@@ -54,24 +63,38 @@ export async function mount(root) {
       </div>`;
 
     const searchEl = body.querySelector("#nmSearch");
-    const metaEl   = body.querySelector("#nmMeta");
-    const emptyEl  = body.querySelector("#nmEmpty");
-    const wrapEl   = body.querySelector("#nmWrap");
-    const bodyEl   = body.querySelector("#nmBody");
+    const metaEl = body.querySelector("#nmMeta");
+    const emptyEl = body.querySelector("#nmEmpty");
+    const wrapEl = body.querySelector("#nmWrap");
+    const bodyEl = body.querySelector("#nmBody");
+    const skel = body.querySelector("#nmSkel");
+    const exportBtn = body.querySelector("#nmExport");
+    const openBtn = body.querySelector("#nmOpenPath");
 
-    function renderConns() {
+    function syncActionBtns() {
+      exportBtn.disabled = !connsData.length;
+      openBtn.disabled = !(selected && selected.path);
+    }
+
+    function filteredRows() {
       const q = connsFilter.toLowerCase();
-      const rows = q
-        ? connsData.filter(c =>
+      return q
+        ? connsData.filter((c) =>
             (c.proto || "").toLowerCase().includes(q) ||
             (c.laddr || "").toLowerCase().includes(q) ||
             (c.raddr || "").toLowerCase().includes(q) ||
-            (c.name  || "").toLowerCase().includes(q) ||
+            (c.name || "").toLowerCase().includes(q) ||
             String(c.pid || "").includes(q))
         : connsData;
+    }
+
+    function renderConns() {
+      skel.hidden = true;
+      const rows = filteredRows();
       if (!rows.length) {
         emptyEl.hidden = false; wrapEl.hidden = true;
-        metaEl.textContent = q ? "Aucune correspondance." : "Aucune connexion active.";
+        metaEl.textContent = connsFilter ? "Aucune correspondance." : "Aucune connexion active.";
+        syncActionBtns();
         return;
       }
       emptyEl.hidden = true; wrapEl.hidden = false;
@@ -80,6 +103,13 @@ export async function mount(root) {
       const frag = document.createDocumentFragment();
       for (const c of rows) {
         const tr = document.createElement("tr");
+        const key = `${c.proto}|${c.laddr}|${c.raddr}|${c.pid}`;
+        if (selected && `${selected.proto}|${selected.laddr}|${selected.raddr}|${selected.pid}` === key) {
+          tr.classList.add("is-selected");
+          tr.style.background = "color-mix(in srgb, var(--accent,#e03545) 18%, transparent)";
+        }
+        tr.dataset.key = key;
+        tr.style.cursor = "pointer";
         tr.innerHTML =
           `<td>${esc(c.proto || "")}</td>` +
           `<td class="meta">${esc(c.laddr || "—")}</td>` +
@@ -87,21 +117,59 @@ export async function mount(root) {
           `<td>${esc(c.status || "")}</td>` +
           `<td>${esc(c.pid || "")}</td>` +
           `<td title="${esc(c.path || "")}">${esc(c.name || "—")}</td>`;
+        tr.addEventListener("click", () => {
+          selected = c;
+          renderConns();
+        });
         frag.appendChild(tr);
       }
       bodyEl.appendChild(frag);
+      syncActionBtns();
     }
 
     searchEl.addEventListener("input", () => { connsFilter = searchEl.value || ""; renderConns(); });
     body.querySelector("#nmRefresh").addEventListener("click", loadConns);
 
+    exportBtn.addEventListener("click", async () => {
+      if (!api?.export_csv) { setStatus("export_csv indisponible.", "error"); return; }
+      const list = filteredRows();
+      if (!list.length) return;
+      setStatus("Export CSV…");
+      skel.hidden = false; skel.innerHTML = skelRows(3);
+      try {
+        const res = await api.export_csv(list);
+        skel.hidden = true;
+        if (res?.ok && !res.cancelled) {
+          setStatus(res.path ? `CSV enregistré : ${res.path}` : `Export OK (${res.count || list.length}).`, "ok");
+        } else if (res?.cancelled) setStatus("Export annulé.");
+        else setStatus("Erreur export : " + (res?.error || "?"), "error");
+      } catch (err) {
+        skel.hidden = true;
+        setStatus("Erreur : " + String(err), "error");
+      }
+    });
+
+    openBtn.addEventListener("click", async () => {
+      if (!selected?.path || !api?.open_path) return;
+      setStatus("Ouverture dossier…");
+      try {
+        const res = await api.open_path(selected.path);
+        if (res?.ok) setStatus("Dossier ouvert.", "ok");
+        else setStatus("Erreur : " + (res?.error || "?"), "error");
+      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+    });
+
     async function loadConns() {
       if (!api?.list_connections) { setStatus("API netmap indisponible.", "error"); return; }
       setStatus("Chargement connexions…");
-      emptyEl.hidden = false; wrapEl.hidden = true; emptyEl.textContent = "Chargement…";
+      skel.hidden = false; skel.innerHTML = skelRows(6);
+      emptyEl.hidden = true; wrapEl.hidden = true;
+      selected = null;
       try {
         const res = await api.list_connections();
         if (!res?.ok) {
+          skel.hidden = true;
+          emptyEl.hidden = false;
           emptyEl.textContent = res?.error || "Erreur";
           setStatus("Erreur : " + (res?.error || "?"), "error");
           return;
@@ -111,6 +179,8 @@ export async function mount(root) {
         renderConns();
         setStatus(`${connsData.length} connexion(s) chargée(s).`);
       } catch (err) {
+        skel.hidden = true;
+        emptyEl.hidden = false;
         emptyEl.textContent = String(err);
         setStatus("Erreur : " + String(err), "error");
       }
@@ -137,7 +207,7 @@ export async function mount(root) {
                  border-radius:8px;padding:10px 12px;min-height:44px;max-height:220px;overflow:auto"></pre>
       </div>
       <div class="panel">
-        <h3 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Sonde TCP (port check)</h3>
+        <h3 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Sonde TCP (tcp_probe)</h3>
         <div class="toolbar-row">
           <div class="search-wrap">
             <input type="text" id="nmProbeHost" placeholder="Hostname ou IP…" autocomplete="off" value="8.8.8.8" />
@@ -149,13 +219,31 @@ export async function mount(root) {
           <button type="button" class="btn accent" id="nmProbeBtn">Sonder</button>
           <span class="meta" id="nmProbeResult" style="min-width:140px"></span>
         </div>
+      </div>
+      <div class="panel">
+        <h3 style="font-size:.85rem;font-weight:600;margin-bottom:10px">Qui écoute ? (check_port local)</h3>
+        <div class="toolbar-row">
+          <input type="number" id="nmCheckPort" value="443" min="1" max="65535"
+            style="width:100px" title="Port local" />
+          <button type="button" class="btn accent" id="nmCheckPortBtn">Vérifier port</button>
+          <span class="meta" id="nmCheckPortMeta" style="min-width:140px"></span>
+        </div>
+        <div id="nmPortSkel" hidden>${skelRows(3)}</div>
+        <div class="table-wrap" id="nmPortWrap" style="margin-top:10px;max-height:220px" hidden>
+          <table class="data">
+            <thead><tr>
+              <th>Proto</th><th>Locale</th><th>Distante</th><th>État</th><th>PID</th><th>Processus</th><th></th>
+            </tr></thead>
+            <tbody id="nmPortBody"></tbody>
+          </table>
+        </div>
       </div>`;
 
-    const pingHost   = body.querySelector("#nmPingHost");
-    const pingBtn    = body.querySelector("#nmPingBtn");
+    const pingHost = body.querySelector("#nmPingHost");
+    const pingBtn = body.querySelector("#nmPingBtn");
     const pingResult = body.querySelector("#nmPingResult");
-    const probeBtn   = body.querySelector("#nmProbeBtn");
-    const probeRes   = body.querySelector("#nmProbeResult");
+    const probeBtn = body.querySelector("#nmProbeBtn");
+    const probeRes = body.querySelector("#nmProbeResult");
 
     pingBtn.addEventListener("click", async () => {
       const h = (pingHost.value || "").trim();
@@ -177,12 +265,12 @@ export async function mount(root) {
         setStatus("Erreur : " + String(err), "error");
       } finally { pingBtn.disabled = false; }
     });
-    pingHost.addEventListener("keydown", e => { if (e.key === "Enter") pingBtn.click(); });
+    pingHost.addEventListener("keydown", (e) => { if (e.key === "Enter") pingBtn.click(); });
 
     probeBtn.addEventListener("click", async () => {
       if (!api?.tcp_probe) { setStatus("API indisponible.", "error"); return; }
-      const host    = (body.querySelector("#nmProbeHost").value    || "").trim() || "127.0.0.1";
-      const port    = parseInt(body.querySelector("#nmProbePort").value)    || 80;
+      const host = (body.querySelector("#nmProbeHost").value || "").trim() || "127.0.0.1";
+      const port = parseInt(body.querySelector("#nmProbePort").value, 10) || 80;
       const timeout = parseFloat(body.querySelector("#nmProbeTimeout").value) || 2.0;
       setStatus("Sonde TCP en cours…");
       probeRes.textContent = "…";
@@ -194,6 +282,64 @@ export async function mount(root) {
           setStatus("");
         } else { probeRes.textContent = res?.error || "Erreur"; setStatus("Erreur sonde.", "error"); }
       } catch (err) { probeRes.textContent = String(err); setStatus("Erreur : " + String(err), "error"); }
+    });
+
+    const portSkel = body.querySelector("#nmPortSkel");
+    const portWrap = body.querySelector("#nmPortWrap");
+    const portBody = body.querySelector("#nmPortBody");
+    const portMeta = body.querySelector("#nmCheckPortMeta");
+
+    body.querySelector("#nmCheckPortBtn").addEventListener("click", async () => {
+      if (!api?.check_port) { setStatus("check_port indisponible.", "error"); return; }
+      const port = parseInt(body.querySelector("#nmCheckPort").value, 10) || 0;
+      if (port < 1 || port > 65535) { setStatus("Port invalide.", "error"); return; }
+      setStatus(`Vérification port ${port}…`);
+      portSkel.hidden = false; portWrap.hidden = true;
+      try {
+        const host = (body.querySelector("#nmProbeHost").value || "").trim() || "127.0.0.1";
+        if (api.tcp_probe) {
+          const probe = await api.tcp_probe(host, port, 2.0).catch(() => null);
+          if (probe?.ok) {
+            probeRes.textContent = `${probe.status} — ${probe.ms} ms (${host})`;
+          }
+        }
+        const res = await api.check_port(port);
+        portSkel.hidden = true;
+        if (!res?.ok) {
+          portMeta.textContent = res?.error || "Erreur";
+          setStatus("Erreur check_port.", "error");
+          return;
+        }
+        const rows = Array.isArray(res.connections) ? res.connections : [];
+        portMeta.textContent = rows.length
+          ? `${rows.length} connexion(s) sur :${port}`
+          : `Aucune connexion locale sur :${port}`;
+        if (!rows.length) { portWrap.hidden = true; setStatus(""); return; }
+        portWrap.hidden = false;
+        portBody.innerHTML = rows.map((c) =>
+          `<tr>
+            <td>${esc(c.proto || "")}</td>
+            <td class="meta">${esc(c.laddr || "")}</td>
+            <td class="meta">${esc(c.raddr || "")}</td>
+            <td>${esc(c.status || "")}</td>
+            <td>${esc(c.pid || "")}</td>
+            <td title="${esc(c.path || "")}">${esc(c.name || "—")}</td>
+            <td>${c.path ? `<button type="button" class="action-btn" data-open="${esc(c.path)}">Dossier</button>` : ""}</td>
+          </tr>`
+        ).join("");
+        setStatus("");
+      } catch (err) {
+        portSkel.hidden = true;
+        setStatus("Erreur : " + String(err), "error");
+      }
+    });
+
+    portBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-open]");
+      if (!btn || !api?.open_path) return;
+      const res = await api.open_path(btn.dataset.open || "");
+      if (res?.ok) setStatus("Dossier ouvert.", "ok");
+      else setStatus("Erreur : " + (res?.error || "?"), "error");
     });
   }
 
@@ -263,8 +409,8 @@ export async function mount(root) {
     });
 
     body.querySelector("#nmProxySet").addEventListener("click", async () => {
-      const http    = body.querySelector("#nmProxyHttp").value.trim();
-      const https   = body.querySelector("#nmProxyHttps").value.trim();
+      const http = body.querySelector("#nmProxyHttp").value.trim();
+      const https = body.querySelector("#nmProxyHttps").value.trim();
       const noProxy = body.querySelector("#nmProxyNoProxy").value.trim();
       const ok = await askConfirm(
         "Définir HTTP_PROXY, HTTPS_PROXY et NO_PROXY dans les variables d'environnement utilisateur ? " +
@@ -296,53 +442,69 @@ export async function mount(root) {
         </div>
       </div>
       <div class="panel flex-fill" style="padding:0">
-        <div class="empty-state" id="nmSharesEmpty">Chargement des partages réseau…</div>
+        <div id="nmSharesSkel">${skelRows(4)}</div>
+        <div class="empty-state" id="nmSharesEmpty" hidden>Chargement des partages réseau…</div>
         <div class="table-wrap" id="nmSharesWrap" hidden>
           <table class="data">
             <thead><tr>
               <th>Nom</th>
               <th>Chemin local</th>
               <th>Description</th>
+              <th></th>
             </tr></thead>
             <tbody id="nmSharesBody"></tbody>
           </table>
         </div>
       </div>`;
 
+    const skel = body.querySelector("#nmSharesSkel");
     body.querySelector("#nmSharesRefresh").addEventListener("click", loadShares);
 
     async function loadShares() {
       const emptyEl = body.querySelector("#nmSharesEmpty");
-      const wrapEl  = body.querySelector("#nmSharesWrap");
-      const bodyEl  = body.querySelector("#nmSharesBody");
-      const metaEl  = body.querySelector("#nmSharesMeta");
+      const wrapEl = body.querySelector("#nmSharesWrap");
+      const bodyEl = body.querySelector("#nmSharesBody");
+      const metaEl = body.querySelector("#nmSharesMeta");
       if (!api?.list_shares) { setStatus("API netmap indisponible.", "error"); return; }
       setStatus("Chargement partages…");
-      emptyEl.hidden = false; wrapEl.hidden = true; emptyEl.textContent = "Chargement…";
+      skel.hidden = false; emptyEl.hidden = true; wrapEl.hidden = true;
       try {
         const res = await api.list_shares();
+        skel.hidden = true;
         if (!res?.ok) {
+          emptyEl.hidden = false;
           emptyEl.textContent = res?.error || "Erreur";
           setStatus("Erreur : " + (res?.error || "?"), "error");
           return;
         }
         const shares = Array.isArray(res.shares) ? res.shares : [];
-        if (!shares.length) { emptyEl.textContent = "Aucun partage réseau trouvé."; setStatus(""); return; }
+        if (!shares.length) { emptyEl.hidden = false; emptyEl.textContent = "Aucun partage réseau trouvé."; setStatus(""); return; }
         emptyEl.hidden = true; wrapEl.hidden = false;
         metaEl.textContent = `${shares.length} partage(s)`;
-        bodyEl.innerHTML = shares.map(s =>
+        bodyEl.innerHTML = shares.map((s) =>
           `<tr>
             <td>${esc(s.name || "")}</td>
             <td class="meta">${esc(s.path || "")}</td>
             <td>${esc(s.description || s.caption || "")}</td>
+            <td>${s.path ? `<button type="button" class="action-btn" data-open="${esc(s.path)}">Ouvrir</button>` : ""}</td>
           </tr>`
         ).join("");
         setStatus("");
       } catch (err) {
+        skel.hidden = true;
+        emptyEl.hidden = false;
         emptyEl.textContent = String(err);
         setStatus("Erreur : " + String(err), "error");
       }
     }
+
+    body.querySelector("#nmSharesBody")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-open]");
+      if (!btn || !api?.open_path) return;
+      const res = await api.open_path(btn.dataset.open || "");
+      if (res?.ok) setStatus("Dossier ouvert.", "ok");
+      else setStatus("Erreur : " + (res?.error || "?"), "error");
+    });
 
     await loadShares();
   }
@@ -351,9 +513,11 @@ export async function mount(root) {
 
   async function onSegment(seg) {
     setStatus("");
-    if      (seg === "connections") await buildConnections();
-    else if (seg === "tools")       await buildTools();
-    else if (seg === "proxy")       await buildProxy();
-    else if (seg === "shares")      await buildShares();
+    if (seg === "connections") await buildConnections();
+    else if (seg === "tools") await buildTools();
+    else if (seg === "proxy") await buildProxy();
+    else if (seg === "shares") await buildShares();
   }
+
+  await setSegment("connections");
 }

@@ -13,6 +13,9 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 
+import csv
+import io
+import os
 import socket
 import time
 from typing import Any
@@ -28,6 +31,7 @@ from tools.netmap import shareview as mod_share
 from tools.netmap.sitecheck import SiteCheckService
 from tools.wifikey import service as mod_wifi
 from security import ConfirmGate
+from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_language
 
 
 class NetAdminApi:
@@ -98,8 +102,6 @@ class NetAdminApi:
         return denied if denied is not None else mod_firewall.set_rule_enabled(name, enabled)
 
     def open_dedicated(self) -> dict:
-        from suite_launch import launch_suite_app
-
         return launch_suite_app("NetAdmin")
 
 
@@ -129,8 +131,6 @@ class WifiKeyApi:
         return mod_wifi.get_key(name)
 
     def open_dedicated(self) -> dict:
-        from suite_launch import launch_suite_app
-
         return launch_suite_app("WifiKey")
 
 
@@ -166,6 +166,7 @@ class NetMapApi:
     def __init__(self, gate: ConfirmGate) -> None:
         self._confirm = gate
         self._sitecheck = SiteCheckService()
+        self._window: Any = None
 
     def prepare_action(self, action: str, payload: dict | None = None) -> dict:
         act = str(action or "").strip()
@@ -259,6 +260,132 @@ class NetMapApi:
         ms = int((time.perf_counter() - started) * 1000)
         return {"ok": True, "host": host_n, "port": port_n, "status": status, "ms": ms, "error": err or None}
 
+    def check_port(self, port: int = 0) -> dict:
+        """Find listeners / connections on a local port (PID + process) — SoT NetMap."""
+        try:
+            port_n = int(port)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "Port invalide (1–65535)", "connections": [], "count": 0}
+        if port_n < 1 or port_n > 65535:
+            return {"ok": False, "error": "Port invalide (1–65535)", "connections": [], "count": 0}
+
+        proc_cache: dict[int, dict[str, str]] = {}
+
+        def proc_info(pid: int | None) -> dict[str, str]:
+            if not pid or pid <= 0:
+                return {"name": "", "path": ""}
+            if pid in proc_cache:
+                return proc_cache[pid]
+            name, path = "", ""
+            try:
+                p = psutil.Process(pid)
+                name = p.name() or ""
+                try:
+                    path = p.exe() or ""
+                except (psutil.Error, OSError):
+                    path = ""
+            except (psutil.Error, OSError):
+                pass
+            info = {"name": name, "path": path}
+            proc_cache[pid] = info
+            return info
+
+        rows: list[dict[str, Any]] = []
+        try:
+            conns = psutil.net_connections(kind="inet")
+        except (psutil.Error, OSError, PermissionError) as exc:
+            return {"ok": False, "error": str(exc), "connections": [], "count": 0}
+
+        for c in conns:
+            try:
+                laddr = c.laddr
+                if not laddr or getattr(laddr, "port", None) != port_n:
+                    continue
+                pid = c.pid
+                meta = proc_info(pid)
+                status = (c.status or "") if hasattr(c, "status") else ""
+                rows.append(
+                    {
+                        "proto": _proto_label(c),
+                        "laddr": _fmt_addr(c.laddr),
+                        "raddr": _fmt_addr(c.raddr),
+                        "status": status,
+                        "pid": pid or 0,
+                        "name": meta["name"],
+                        "path": meta["path"],
+                    }
+                )
+            except (AttributeError, TypeError, ValueError):
+                continue
+
+        rows.sort(key=lambda r: ((r.get("status") or ""), r.get("pid") or 0))
+        return {"ok": True, "port": port_n, "connections": rows, "count": len(rows)}
+
+    def export_csv(self, rows: list | None = None) -> dict:
+        """Export connection rows to CSV (save dialog or temp fallback) — SoT NetMap."""
+        items = rows if isinstance(rows, list) else []
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["proto", "laddr", "raddr", "status", "pid", "name", "path"])
+        for raw in items:
+            if not isinstance(raw, dict):
+                continue
+            writer.writerow(
+                [
+                    raw.get("proto") or "",
+                    raw.get("laddr") or "",
+                    raw.get("raddr") or "",
+                    raw.get("status") or "",
+                    raw.get("pid") or "",
+                    raw.get("name") or "",
+                    raw.get("path") or "",
+                ]
+            )
+        content = buf.getvalue()
+
+        if self._window is not None and hasattr(self._window, "create_file_dialog"):
+            try:
+                import webview
+
+                result = self._window.create_file_dialog(
+                    webview.SAVE_DIALOG,
+                    save_filename="netmap-connections.csv",
+                    file_types=("CSV Files (*.csv)", "All files (*.*)"),
+                )
+                if result:
+                    path = result if isinstance(result, str) else (result[0] if result else None)
+                    if path:
+                        Path(path).write_text(content, encoding="utf-8-sig")
+                        return {"ok": True, "path": str(path), "count": len(items)}
+                    return {"ok": True, "cancelled": True}
+            except Exception as exc:  # noqa: BLE001
+                return {"ok": False, "error": str(exc)}
+
+        try:
+            import tempfile
+
+            tmp = Path(tempfile.gettempdir()) / "netmap-connections.csv"
+            tmp.write_text(content, encoding="utf-8-sig")
+            os.startfile(str(tmp))  # type: ignore[attr-defined]
+            return {"ok": True, "path": str(tmp), "count": len(items), "opened": True}
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def open_path(self, path: str = "") -> dict:
+        """Open process folder in Explorer — SoT NetMap."""
+        path_n = (path or "").strip()
+        if not path_n:
+            return {"ok": False, "error": "Chemin vide"}
+        p = Path(path_n)
+        folder = p if p.is_dir() else p.parent
+        if not folder.is_dir():
+            return {"ok": False, "error": "Dossier introuvable"}
+        try:
+            os.startfile(str(folder))  # type: ignore[attr-defined]
+            return {"ok": True, "path": str(folder)}
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
+
     def list_connections(self) -> dict:
         rows: list[dict[str, Any]] = []
         proc_cache: dict[int, dict[str, str]] = {}
@@ -307,8 +434,6 @@ class NetMapApi:
         return {"ok": True, "connections": rows, "count": len(rows)}
 
     def open_dedicated(self) -> dict:
-        from suite_launch import launch_suite_app
-
         return launch_suite_app("NetMap")
 
 
@@ -397,9 +522,13 @@ class Api(WindowChromeMixin):
 
     def set_window(self, window: Any) -> None:
         WindowChromeMixin.set_window(self, window)
-        # RoadWay tray/window helpers may need the HWND
+        # RoadWay / NetMap export dialogs need the HWND
         try:
             self.roadway._window = window  # noqa: SLF001
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            self.netmap._window = window  # noqa: SLF001
         except Exception:  # noqa: BLE001
             pass
 
