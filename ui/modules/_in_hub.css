@@ -337,6 +337,17 @@
   cursor: pointer;
 }
 
+.hub-inhub .hub-progress {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hub-inhub .hub-progress[hidden] {
+  display: none !important;
+}
+
 .hub-inhub .progress-bar {
   height: 8px;
   border-radius: 999px;
