@@ -514,3 +514,7 @@ body.frameless:not(.pcd-embed) .hub-main > .hub-view {
   overflow: auto;
   display: block;
 }
+
+/* hub-scroll-global */
+#hubView, .hub-main > .hub-view { min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.hub-dash-root { overflow-x: hidden; overflow-y: auto; max-height: 100%; }

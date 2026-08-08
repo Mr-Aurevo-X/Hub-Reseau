@@ -40,7 +40,8 @@
   flex: 1;
   min-height: 0;
   gap: 0.65rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .hub-inhub .hub-inhub-scroll {
@@ -362,4 +363,59 @@
   width: 0%;
   background: var(--accent);
   transition: width 0.2s ease;
+}
+
+
+/* --- Global module vertical scroll (dense apps / 34" no resize) --- */
+.hub-inhub-body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+.hub-inhub .hub-inhub-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Scrollbar dark theme — WebKit + Firefox */
+.hub-main,
+#hubView,
+.hub-inhub-body,
+.hub-inhub-scroll,
+.hub-dash-root {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.22) transparent;
+}
+.hub-main::-webkit-scrollbar,
+#hubView::-webkit-scrollbar,
+.hub-inhub-body::-webkit-scrollbar,
+.hub-inhub-scroll::-webkit-scrollbar,
+.hub-dash-root::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.hub-main::-webkit-scrollbar-thumb,
+#hubView::-webkit-scrollbar-thumb,
+.hub-inhub-body::-webkit-scrollbar-thumb,
+.hub-inhub-scroll::-webkit-scrollbar-thumb,
+.hub-dash-root::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.hub-main::-webkit-scrollbar-thumb:hover,
+#hubView::-webkit-scrollbar-thumb:hover,
+.hub-inhub-body::-webkit-scrollbar-thumb:hover,
+.hub-inhub-scroll::-webkit-scrollbar-thumb:hover,
+.hub-dash-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.35);
+  background-clip: padding-box;
+}
+.hub-main::-webkit-scrollbar-track,
+#hubView::-webkit-scrollbar-track,
+.hub-inhub-body::-webkit-scrollbar-track,
+.hub-inhub-scroll::-webkit-scrollbar-track,
+.hub-dash-root::-webkit-scrollbar-track {
+  background: transparent;
 }
