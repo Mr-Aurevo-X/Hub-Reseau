@@ -267,8 +267,42 @@ class ConfirmGate:
         self._pending: dict[str, tuple[str, str, float]] = {}
 
     @staticmethod
+    def _canonical_payload(payload: Any) -> Any:
+        """Normalize pywebview / dict / list payloads for stable digests."""
+        if payload is None:
+            return None
+        if isinstance(payload, (str, int, float, bool)):
+            return payload
+        if isinstance(payload, (list, tuple)):
+            return [ConfirmGate._canonical_payload(x) for x in payload]
+        if isinstance(payload, dict):
+            return {
+                str(k): ConfirmGate._canonical_payload(payload[k])
+                for k in sorted(payload.keys(), key=lambda x: str(x))
+            }
+        # pywebview / Mapping-like objects
+        try:
+            items = dict(payload)  # type: ignore[arg-type]
+            return ConfirmGate._canonical_payload(items)
+        except Exception:
+            return repr(payload)
+
+    @staticmethod
     def _payload_digest(payload: Any) -> str:
-        raw = repr(payload).encode("utf-8", errors="replace")
+        # Canonical JSON (sorted keys) — repr() broke ConfirmGate when key order
+        # or list/tuple differed between prepare_action and start_action (pywebview).
+        import json
+
+        try:
+            raw = json.dumps(
+                ConfirmGate._canonical_payload(payload),
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+                default=str,
+            ).encode("utf-8", errors="replace")
+        except Exception:
+            raw = repr(payload).encode("utf-8", errors="replace")
         return hashlib.sha256(raw).hexdigest()
 
     def prepare(self, action: str, payload: Any = None) -> str:
