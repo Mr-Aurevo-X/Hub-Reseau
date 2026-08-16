@@ -9,7 +9,10 @@ These terms apply to Atelier and to **all Mr-Aurevo-X Suite tools** available th
 The Suite is provided **100% free**. No subscription or payment is required for intended use. There is **no automatic update**. The publisher **does not commit** to future versions, fixes, or features. Any later copy is provided manually, with no obligation.
 
 3. License
-Personal or professional use on your machines is allowed. Redistribution, resale, aggressive reverse engineering, or removal of copyright notices is forbidden without written consent.
+Personal or professional use on your machines is allowed. The software remains **100% free of charge**.
+Official binary distribution is **only** through Install-Easy and/or the `MrAurevoX-Launcher` Releases channel (github.com/Mr-Aurevo-X/MrAurevoX-Launcher).
+Without prior written consent from Mr-Aurevo-X, the following are forbidden: forking or republishing source as a competing / substitute project; redistribution outside the official channel; resale; rebranding; aggressive reverse engineering; removal of © markers / disclaimers / About text.
+The full text is in LegalHelpers `LICENSE` / `LICENSE.fr.md`.
 
 4. Responsibility (general)
 Software is provided “as is”. You are responsible for actions you run. A restore point / backup is recommended before sensitive operations. Mr-Aurevo-X is not liable for data loss or indirect damages to the extent permitted by law.

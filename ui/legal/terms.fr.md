@@ -9,7 +9,10 @@ Les présentes CGU s’appliquent à Atelier et à **tous les outils de la Suite
 La Suite est fournie **100 % gratuitement**. Aucun abonnement, aucun paiement requis pour l’usage prévu. Il n’y a **aucune mise à jour automatique**. L’éditeur **ne s’engage pas** à publier des versions futures, corrections ou nouvelles fonctionnalités. Toute copie éventuelle ultérieure est fournie manuellement, sans obligation.
 
 3. Licence d’usage
-Usage personnel ou professionnel autorisé sur vos machines. Redistribution, revente, reverse engineering agressif ou suppression des mentions de copyright sont interdits sauf accord écrit.
+Usage personnel ou professionnel autorisé sur vos machines. Les logiciels restent **100 % gratuits**.
+La distribution binaire officielle passe **uniquement** par Install-Easy et/ou le canal Releases `MrAurevoX-Launcher` (github.com/Mr-Aurevo-X/MrAurevoX-Launcher).
+Sans accord écrit préalable de Mr-Aurevo-X sont interdits : fork ou republication des sources comme projet concurrent / de substitution ; redistribution hors canal officiel ; revente ; rebrand ; reverse engineering agressif ; suppression des mentions © / disclaimers / textes À propos.
+Le texte complet figure dans `LICENSE` / `LICENSE.fr.md` du kit LegalHelpers.
 
 4. Responsabilité (générale)
 Les logiciels sont fournis « en l’état ». Vous êtes responsable des actions lancées. Un point de restauration / une sauvegarde est recommandé avant toute opération sensible. Mr-Aurevo-X ne pourra être tenu responsable des pertes de données ou dommages indirects dans les limites autorisées par la loi.
