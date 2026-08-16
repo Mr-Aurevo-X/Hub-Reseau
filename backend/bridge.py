@@ -438,7 +438,10 @@ class NetMapApi:
 
 
 HUB_TITLE = "PC Command | Network"
+HUB_ID = "reseau"
+_HUB_ROOT = _BACKEND.parent
 from window_chrome import WindowChromeMixin  # noqa: E402
+import hub_update  # noqa: E402
 from api_roadway import RoadwayApi  # noqa: E402
 
 def is_admin() -> bool:
@@ -586,6 +589,24 @@ class Api(WindowChromeMixin):
             return {"ok": True, "title": title}
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
+
+    def get_app_version(self) -> dict:
+        ver = hub_update.get_local_suite_version(_HUB_ROOT)
+        return {
+            "ok": True,
+            "version": ver,
+            "hubId": HUB_ID,
+            "title": hub_update.title_with_version(HUB_TITLE, ver),
+        }
+
+    def check_for_update(self) -> dict:
+        return hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
+
+    def open_update(self) -> dict:
+        info = hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
+        return hub_update.open_update_action(
+            _HUB_ROOT, release_url=info.get("releaseUrl")
+        )
 
     def open_suite_app(self, name: str) -> dict:
         return launch_suite_app(name)

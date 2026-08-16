@@ -15,6 +15,7 @@ const cache = Object.create(null);
 let currentView    = "dashboard";
 let currentDash    = null;
 let currentSegment = "";
+let appVersion = "";
 
 function apiRoot() {
   return window.pywebview && window.pywebview.api;
@@ -53,11 +54,71 @@ async function applyTitle(title) {
   } catch (_) {}
 }
 
+
+function homeTitle() {
+  return appVersion ? `${HUB_NAME} [${appVersion}]` : HUB_NAME;
+}
+
+function dismissUpdateBanner() {
+  const el = document.getElementById("hubUpdateBanner");
+  if (el) el.remove();
+}
+
+function showUpdateBanner(info) {
+  dismissUpdateBanner();
+  if (!info || !info.updateAvailable) return;
+  const main = document.getElementById("hubMain");
+  if (!main) return;
+  const bar = document.createElement("div");
+  bar.id = "hubUpdateBanner";
+  bar.className = "hub-update-banner";
+  bar.setAttribute("role", "status");
+  const msg =
+    info.message ||
+    `Mise à jour disponible : ${info.local || "?"} → ${info.remote || "?"}`;
+  bar.innerHTML =
+    `<div class="hub-update-text"><strong>Mise à jour disponible</strong><span></span></div>` +
+    `<div class="hub-update-actions">` +
+    `<button type="button" class="hub-update-btn" id="hubUpdateOpen">Ouvrir Install-Easy</button>` +
+    `<button type="button" class="hub-update-dismiss" id="hubUpdateDismiss" aria-label="Fermer">×</button>` +
+    `</div>`;
+  bar.querySelector(".hub-update-text span").textContent = msg;
+  main.insertBefore(bar, main.firstChild);
+  document.getElementById("hubUpdateDismiss")?.addEventListener("click", dismissUpdateBanner);
+  document.getElementById("hubUpdateOpen")?.addEventListener("click", async () => {
+    const a = apiRoot();
+    try {
+      if (a && typeof a.open_update === "function") await a.open_update();
+    } catch (_) {}
+  });
+}
+
+async function loadVersionAndUpdates() {
+  const a = apiRoot();
+  if (!a) return;
+  try {
+    if (typeof a.get_app_version === "function") {
+      const v = await a.get_app_version();
+      if (v?.version) appVersion = String(v.version);
+    }
+  } catch (_) {}
+  try {
+    if (typeof a.check_for_update === "function") {
+      const u = await a.check_for_update();
+      if (u?.ok && u.updateAvailable) showUpdateBanner(u);
+    }
+  } catch (_) {}
+}
+
 async function setTitle(viewId, segmentLabel) {
   currentSegment = segmentLabel || "";
-  let title = TITLES[viewId] || TITLES.dashboard;
-  if (segmentLabel && viewId !== "dashboard") {
+  let title;
+  if (viewId === "dashboard" || !viewId) {
+    title = homeTitle();
+  } else if (segmentLabel) {
     title = `${HUB_NAME} [${segmentLabel}]`;
+  } else {
+    title = TITLES[viewId] || homeTitle();
   }
   await applyTitle(title);
 }
@@ -130,6 +191,7 @@ function wireSidebar() {
 async function boot() {
   wireSidebar();
   await waitApi();
+  await loadVersionAndUpdates();
   await showView("dashboard");
 }
 

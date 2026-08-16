@@ -518,3 +518,53 @@ body.frameless:not(.pcd-embed) .hub-main > .hub-view {
 /* hub-scroll-global */
 #hubView, .hub-main > .hub-view { min-height: 0; overflow-x: hidden; overflow-y: auto; }
 .hub-dash-root { overflow-x: hidden; overflow-y: auto; max-height: 100%; }
+
+/* Non-blocking suite update banner */
+.hub-update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(62, 199, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(62, 199, 255, 0.1);
+  flex-shrink: 0;
+}
+.hub-update-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.hub-update-text strong { font-size: 0.9rem; }
+.hub-update-text span { color: var(--muted); }
+.hub-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hub-update-btn {
+  border: 1px solid rgba(62, 199, 255, 0.4);
+  background: rgba(62, 199, 255, 0.16);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.hub-update-btn:hover { background: rgba(62, 199, 255, 0.28); }
+.hub-update-dismiss {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.hub-update-dismiss:hover { color: var(--text); }

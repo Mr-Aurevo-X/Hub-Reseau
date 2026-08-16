@@ -104,15 +104,27 @@ def _safe_app_name(name: str) -> str | None:
 
 
 def _app_folder(root: Path, app_name: str) -> Path | None:
+    """Resolve app folder under a candidate root (flat or Hub-*/_source_apps)."""
     try:
         root_r = root.resolve()
-        folder = (root_r / app_name).resolve()
-        folder.relative_to(root_r)
-    except (OSError, ValueError):
+    except OSError:
         return None
-    if not folder.is_dir():
-        return None
-    return folder
+    candidates: list[Path] = [root_r / app_name, root_r / "_source_apps" / app_name]
+    try:
+        for hub in sorted(root_r.glob("Hub-*")):
+            if hub.is_dir():
+                candidates.append(hub / "_source_apps" / app_name)
+    except OSError:
+        pass
+    for folder in candidates:
+        try:
+            folder_r = folder.resolve()
+            folder_r.relative_to(root_r)
+        except (OSError, ValueError):
+            continue
+        if folder_r.is_dir():
+            return folder_r
+    return None
 
 
 def _cmd_has_launcher_mark(path: Path) -> bool:
@@ -175,6 +187,8 @@ def resolve_suite_app_python_host(name: str) -> Path | None:
             continue
         for rel in (
             Path("host") / "host.py",
+            # Nested layout after accidental double-folder (e.g. HotkeyList/HotkeyList/host)
+            Path(app_name) / "host" / "host.py",
             Path("host") / f"{slug}_host.py",
             Path(f"{slug}_host.py"),
             Path("host.py"),
