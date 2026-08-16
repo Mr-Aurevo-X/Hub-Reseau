@@ -606,12 +606,11 @@ class Api(WindowChromeMixin):
         info = hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
         return hub_update.open_update_action(
             _HUB_ROOT, release_url=info.get("releaseUrl")
+        )
 
     def apply_update(self) -> dict:
         """Download + replace Launch-Hub zip in-place (LOCALAPPDATA install)."""
         return hub_update.apply_hub_update(HUB_ID, _HUB_ROOT)
-
-        )
 
     def open_suite_app(self, name: str) -> dict:
         return launch_suite_app(name)
