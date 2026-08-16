@@ -79,7 +79,8 @@ function showUpdateBanner(info) {
   bar.innerHTML =
     `<div class="hub-update-text"><strong>Mise à jour disponible</strong><span></span></div>` +
     `<div class="hub-update-actions">` +
-    `<button type="button" class="hub-update-btn" id="hubUpdateOpen">Ouvrir Install-Easy</button>` +
+    `<button type="button" class="hub-update-btn" id="hubUpdateApply">Mettre à jour maintenant</button>` +
+    `<button type="button" class="hub-update-btn hub-update-btn-secondary" id="hubUpdateOpen">Ouvrir Install-Easy</button>` +
     `<button type="button" class="hub-update-dismiss" id="hubUpdateDismiss" aria-label="Fermer">×</button>` +
     `</div>`;
   bar.querySelector(".hub-update-text span").textContent = msg;
@@ -91,6 +92,30 @@ function showUpdateBanner(info) {
       if (a && typeof a.open_update === "function") await a.open_update();
     } catch (_) {}
   });
+
+  document.getElementById("hubUpdateApply")?.addEventListener("click", async () => {
+    const a = apiRoot();
+    const btn = document.getElementById("hubUpdateApply");
+    if (btn) { btn.disabled = true; btn.textContent = "Téléchargement…"; }
+    try {
+      if (a && typeof a.apply_update === "function") {
+        const r = await a.apply_update();
+        if (r?.ok) {
+          if (btn) btn.textContent = r.restartRequired ? "Redémarrage…" : "OK — relance le hub";
+          if (r.restartRequired) {
+            try { window.close(); } catch (_) {}
+          }
+        } else if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Réessayer";
+          alert(r?.error || "Mise à jour échouée");
+        }
+      }
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Réessayer"; }
+    }
+  });
+
 }
 
 async function loadVersionAndUpdates() {

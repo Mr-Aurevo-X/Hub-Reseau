@@ -1,18 +1,19 @@
-"""Lightweight hub / suite update check against MrAurevoX-Launcher releases.
+"""Hub / suite update check + in-place Launch-Hub zip download/replace.
 
-Intentional scope: version compare + CTA (Install-Easy / release page).
-Does not download or extract zips into hubs (keeps hub surface small).
-Allowlist matches Install-Easy release_client.
+Allowlist matches Install-Easy release_client (MrAurevoX-Launcher only).
 """
 from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,10 @@ _ALLOWED_API_HOSTS = frozenset(
         "github.com",
     }
 )
+_ALLOWED_DOWNLOAD_HOSTS = _ALLOWED_API_HOSTS | {
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+}
 CATALOG_ASSET = "catalog.json"
 
 # Hub id → Launch-Hub-*.zip on the releases channel
@@ -35,12 +40,33 @@ HUB_ASSETS: dict[str, str] = {
     "utilitaires": "Launch-Hub-Utilitaires.zip",
 }
 
+HUB_EXES: dict[str, str] = {
+    "systeme": "Launch-Hub-Systeme.exe",
+    "reseau": "Launch-Hub-Reseau.exe",
+    "securite": "Launch-Hub-Securite.exe",
+    "dev": "Launch-Hub-Dev.exe",
+    "utilitaires": "Launch-Hub-Utilitaires.exe",
+}
+
 HUB_PACK_IDS: dict[str, str] = {
     "systeme": "hub-systeme",
     "reseau": "hub-reseau",
     "securite": "hub-securite",
     "dev": "hub-dev",
     "utilitaires": "hub-utilitaires",
+}
+
+_HUB_ALIASES = {
+    "system": "systeme",
+    "systeme": "systeme",
+    "network": "reseau",
+    "reseau": "reseau",
+    "security": "securite",
+    "securite": "securite",
+    "development": "dev",
+    "dev": "dev",
+    "utilities": "utilitaires",
+    "utilitaires": "utilitaires",
 }
 
 
@@ -53,6 +79,11 @@ def resolve_release_repo(repo: str | None = None) -> str:
 
 def api_latest_url(repo: str | None = None) -> str:
     return f"https://api.github.com/repos/{resolve_release_repo(repo)}/releases/latest"
+
+
+def normalize_hub_id(hub_id: str) -> str:
+    hub_key = (hub_id or "").strip().lower().replace("hub-", "").replace("_", "-")
+    return _HUB_ALIASES.get(hub_key, hub_key)
 
 
 def find_token(*search_roots: Path) -> str | None:
@@ -102,20 +133,32 @@ def _assert_allowed_url(url: str) -> None:
         raise ValueError(f"host not allowlisted: {host!r}")
 
 
-def _api_request(url: str, token: str | None = None) -> bytes:
+def _assert_allowed_download_url(url: str) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(f"non-HTTPS URL rejected: {url!r}")
+    host = (parsed.hostname or "").lower()
+    if host not in _ALLOWED_DOWNLOAD_HOSTS:
+        raise ValueError(f"download host not allowlisted: {host!r}")
+
+
+def _api_request(url: str, token: str | None = None, *, accept: str | None = None) -> bytes:
     _assert_allowed_url(url)
     headers = {
-        "Accept": "application/vnd.github+json",
+        "Accept": accept or "application/vnd.github+json",
         "User-Agent": "PC-Command-HubUpdate",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=25) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:
         final = resp.geturl()
         if final and final != url:
-            _assert_allowed_url(final)
+            if accept == "application/octet-stream":
+                _assert_allowed_download_url(final)
+            else:
+                _assert_allowed_url(final)
         return resp.read()
 
 
@@ -194,6 +237,19 @@ def get_local_suite_version(app_dir: Path) -> str | None:
     return read_local_version(*version_search_roots(app_dir))
 
 
+def resolve_hub_install_dir(app_dir: Path) -> Path:
+    """Directory that owns Launch-Hub-*.exe (frozen: exe parent; else default install)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    ad = Path(app_dir).resolve()
+    # Dev: prefer LOCALAPPDATA if a hub exe already lives there
+    install = default_install_dir()
+    for name in HUB_EXES.values():
+        if (install / name).is_file():
+            return install
+    return ad
+
+
 def _catalog_from_release(release: dict, token: str | None) -> dict | None:
     assets = release.get("assets") or []
     catalog_asset = None
@@ -203,12 +259,10 @@ def _catalog_from_release(release: dict, token: str | None) -> dict | None:
             break
     if not catalog_asset:
         return None
-    # Prefer API asset URL (needs token for private); fall back to browser URL
     url = catalog_asset.get("url") or catalog_asset.get("browser_download_url")
     if not url:
         return None
     if "api.github.com" in str(url) and not token:
-        # Private asset API needs auth; try browser_download_url if public
         url = catalog_asset.get("browser_download_url")
         if not url:
             return None
@@ -218,22 +272,11 @@ def _catalog_from_release(release: dict, token: str | None) -> dict | None:
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
-        headers["Accept"] = "application/octet-stream"
     _assert_allowed_url(str(url))
-    # browser_download may redirect to objects.githubusercontent.com — allow via follow
-    # but only start from allowlisted hosts; urllib follows redirects.
-    # Expand allowlist check on final URL after download via opener that validates.
     req = urllib.request.Request(str(url), headers=headers)
     with urllib.request.urlopen(req, timeout=25) as resp:
         final = resp.geturl() or str(url)
-        parsed = urllib.parse.urlparse(final)
-        host = (parsed.hostname or "").lower()
-        allowed_dl = _ALLOWED_API_HOSTS | {
-            "objects.githubusercontent.com",
-            "release-assets.githubusercontent.com",
-        }
-        if parsed.scheme != "https" or host not in allowed_dl:
-            raise ValueError(f"download host not allowlisted: {host!r}")
+        _assert_allowed_download_url(final)
         raw = resp.read()
     return json.loads(raw.decode("utf-8"))
 
@@ -246,21 +289,7 @@ def check_hub_update(
     repo: str | None = None,
 ) -> dict[str, Any]:
     """Compare local suiteVersion to latest release catalog for this hub's zip."""
-    hub_key = (hub_id or "").strip().lower().replace("hub-", "").replace("_", "-")
-    # Accept "systeme" / "Hub-Systeme" / "hub-systeme"
-    aliases = {
-        "system": "systeme",
-        "systeme": "systeme",
-        "network": "reseau",
-        "reseau": "reseau",
-        "security": "securite",
-        "securite": "securite",
-        "development": "dev",
-        "dev": "dev",
-        "utilities": "utilitaires",
-        "utilitaires": "utilitaires",
-    }
-    hub_key = aliases.get(hub_key, hub_key)
+    hub_key = normalize_hub_id(hub_id)
     asset_name = HUB_ASSETS.get(hub_key)
     if not asset_name:
         return {
@@ -288,6 +317,7 @@ def check_hub_update(
             "hubId": hub_key,
             "asset": asset_name,
             "action": "install_easy",
+            "canSelfUpdate": False,
         }
     except Exception as exc:  # noqa: BLE001
         return {
@@ -299,6 +329,7 @@ def check_hub_update(
             "hubId": hub_key,
             "asset": asset_name,
             "action": "install_easy",
+            "canSelfUpdate": False,
         }
 
     tag = str(release.get("tag_name") or "").strip()
@@ -326,10 +357,12 @@ def check_hub_update(
         "hubId": hub_key,
         "packId": HUB_PACK_IDS.get(hub_key),
         "asset": asset_name,
+        "exe": HUB_EXES.get(hub_key),
         "hasAsset": has_asset,
         "tag": tag,
         "repo": resolve_release_repo(repo),
-        "action": "install_easy",
+        "action": "download" if update_available else "install_easy",
+        "canSelfUpdate": bool(update_available and has_asset),
         "releaseUrl": (
             f"https://github.com/{resolve_release_repo(repo)}/releases/latest"
         ),
@@ -351,7 +384,6 @@ def find_install_easy_exe(*search_roots: Path) -> Path | None:
         for n in names:
             candidates.append(r / n)
             candidates.append(r / "Install-Easy-Private" / n)
-    # Common ship locations
     local = default_install_dir()
     for n in names:
         candidates.append(local / n)
@@ -413,3 +445,223 @@ def title_with_version(base_title: str, version: str | None, *, module: str | No
     if ver:
         return f"{base} [{ver}]"
     return base
+
+
+def _safe_extract(zip_path: Path, dest: Path) -> None:
+    dest = dest.resolve()
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.infolist():
+            name = member.filename.replace("\\", "/")
+            if not name or name.startswith("/") or name.startswith("//"):
+                raise RuntimeError(f"Zip unsafe: {name}")
+            if len(name) >= 2 and name[1] == ":":
+                raise RuntimeError(f"Zip unsafe (drive): {name}")
+            if ".." in name.split("/"):
+                raise RuntimeError(f"Zip unsafe: {name}")
+            if getattr(member, "is_symlink", lambda: False)():
+                raise RuntimeError(f"Zip unsafe (symlink): {name}")
+            mode = (member.external_attr >> 16) & 0o170000
+            if mode == 0o120000:
+                raise RuntimeError(f"Zip unsafe (symlink mode): {name}")
+            target = (dest / name).resolve()
+            try:
+                target.relative_to(dest)
+            except ValueError as exc:
+                raise RuntimeError(f"Zip unsafe (escape): {name}") from exc
+            if name.endswith("/"):
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(member, "r") as src, open(target, "wb") as out:
+                shutil.copyfileobj(src, out)
+
+
+def _is_locked(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        with open(path, "a+b"):
+            return False
+    except OSError:
+        return True
+
+
+def _finish_hub_update_script(
+    install_dir: Path, staging: Path, exe_name: str
+) -> Path:
+    script = install_dir / "_finish_hub_update.cmd"
+    lines = [
+        "@echo off",
+        "setlocal",
+        f'cd /d "{install_dir}"',
+        "echo Finalisation mise a jour hub...",
+        "timeout /t 2 /nobreak >nul",
+        f'if exist "{staging}\\{exe_name}" copy /Y "{staging}\\{exe_name}" ".\\" >nul',
+        f'if exist "{staging}\\version.json" copy /Y "{staging}\\version.json" ".\\" >nul',
+        f'rmdir /S /Q "{staging}" 2>nul',
+        f'del /F /Q "{script.name}" 2>nul',
+        f'start "" "{exe_name}"',
+        "exit /b 0",
+        "",
+    ]
+    script.write_text("\n".join(lines), encoding="utf-8")
+    return script
+
+
+def _download_asset_bytes(asset: dict, token: str | None) -> bytes:
+    url = asset.get("url") or asset.get("browser_download_url")
+    if not url:
+        raise RuntimeError("Asset sans URL")
+    if "api.github.com" in str(url):
+        return _api_request(str(url), token, accept="application/octet-stream")
+    _assert_allowed_download_url(str(url))
+    headers = {
+        "Accept": "application/octet-stream",
+        "User-Agent": "PC-Command-HubUpdate",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(str(url), headers=headers)
+    with urllib.request.urlopen(req, timeout=300) as resp:
+        final = resp.geturl() or str(url)
+        _assert_allowed_download_url(final)
+        return resp.read()
+
+
+def apply_hub_update(
+    hub_id: str,
+    app_dir: Path,
+    *,
+    token: str | None = None,
+    repo: str | None = None,
+) -> dict[str, Any]:
+    """Download allowlisted Launch-Hub-*.zip and replace the local hub exe in-place."""
+    hub_key = normalize_hub_id(hub_id)
+    asset_name = HUB_ASSETS.get(hub_key)
+    exe_name = HUB_EXES.get(hub_key)
+    if not asset_name or not exe_name:
+        return {"ok": False, "error": f"hub inconnu: {hub_id!r}"}
+
+    install_dir = resolve_hub_install_dir(app_dir)
+    # Refuse replacing into Dev Central Tree SoT by accident
+    lowered = str(install_dir).lower().replace("/", "\\")
+    for marker in ("\\dev central tree\\", "\\01_hubs\\", "\\atelierwindows\\"):
+        if marker in f"\\{lowered}\\":
+            return {
+                "ok": False,
+                "error": (
+                    "Mise à jour refusée : le hub tourne depuis le dépôt source. "
+                    "Installe via Install-Easy sous %LOCALAPPDATA%\\MrAurevoX*."
+                ),
+            }
+
+    roots = version_search_roots(app_dir)
+    tok = token if token is not None else find_token(*roots, install_dir, default_install_dir())
+    if not tok:
+        return {
+            "ok": False,
+            "error": (
+                "Pas d'accès GitHub pour télécharger la mise à jour. "
+                "Ouvre Install-Easy ou configure gh auth / installer.token."
+            ),
+            "action": "install_easy",
+        }
+
+    try:
+        release = json.loads(_api_request(api_latest_url(repo), tok).decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"Impossible de lire la release : {exc}"}
+
+    assets = {str(a.get("name") or ""): a for a in (release.get("assets") or [])}
+    asset = assets.get(asset_name)
+    if not asset:
+        return {
+            "ok": False,
+            "error": f"Asset manquant sur la release : {asset_name}",
+            "action": "install_easy",
+        }
+
+    staging = install_dir / "_hub_update_staging"
+    zip_path: Path | None = None
+    try:
+        install_dir.mkdir(parents=True, exist_ok=True)
+        if staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        staging.mkdir(parents=True, exist_ok=True)
+
+        raw = _download_asset_bytes(asset, tok)
+        if not raw or len(raw) < 1024:
+            return {"ok": False, "error": "Téléchargement vide ou trop petit"}
+        fd, tmp_name = tempfile.mkstemp(prefix="hub-upd-", suffix=".zip")
+        os.close(fd)
+        zip_path = Path(tmp_name)
+        zip_path.write_bytes(raw)
+        _safe_extract(zip_path, staging)
+
+        staged_exe = staging / exe_name
+        if not staged_exe.is_file():
+            # zip may nest a single folder
+            found = list(staging.rglob(exe_name))
+            if not found:
+                return {
+                    "ok": False,
+                    "error": f"{exe_name} introuvable dans {asset_name}",
+                }
+            staged_exe = found[0]
+            # Flatten into staging root for the finish script
+            if staged_exe.parent != staging:
+                shutil.copy2(staged_exe, staging / exe_name)
+                ver_src = staged_exe.parent / "version.json"
+                if ver_src.is_file():
+                    shutil.copy2(ver_src, staging / "version.json")
+
+        target_exe = install_dir / exe_name
+        if not _is_locked(target_exe):
+            try:
+                shutil.copy2(staging / exe_name, target_exe)
+                ver_stage = staging / "version.json"
+                if ver_stage.is_file():
+                    shutil.copy2(ver_stage, install_dir / "version.json")
+                shutil.rmtree(staging, ignore_errors=True)
+                return {
+                    "ok": True,
+                    "restartRequired": False,
+                    "installDir": str(install_dir),
+                    "exe": exe_name,
+                    "tag": str(release.get("tag_name") or ""),
+                    "message": "Mise à jour appliquée. Relance le hub pour activer.",
+                }
+            except OSError:
+                pass
+
+        script = _finish_hub_update_script(install_dir, staging, exe_name)
+        try:
+            subprocess.Popen(
+                ["cmd.exe", "/c", str(script)],
+                cwd=str(install_dir),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                | getattr(subprocess, "DETACHED_PROCESS", 0x00000008),
+                close_fds=True,
+            )
+        except OSError as exc:
+            return {"ok": False, "error": f"Impossible de lancer le script de remplacement : {exc}"}
+
+        return {
+            "ok": True,
+            "restartRequired": True,
+            "installDir": str(install_dir),
+            "exe": exe_name,
+            "finishScript": str(script),
+            "tag": str(release.get("tag_name") or ""),
+            "message": "Mise à jour téléchargée — le hub va redémarrer.",
+        }
+    except Exception as exc:  # noqa: BLE001
+        shutil.rmtree(staging, ignore_errors=True)
+        return {"ok": False, "error": str(exc)}
+    finally:
+        if zip_path is not None:
+            try:
+                zip_path.unlink(missing_ok=True)
+            except OSError:
+                pass
