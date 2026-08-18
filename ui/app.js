@@ -64,25 +64,50 @@ function dismissUpdateBanner() {
   if (el) el.remove();
 }
 
-function showUpdateBanner(info) {
+function showUpdateBanner(info, opts) {
   dismissUpdateBanner();
-  if (!info || !info.updateAvailable) return;
+  if (!info) return;
+  const silent = !!(opts && opts.silent);
+  const applying = !!(opts && opts.applying);
+  const failed = !!(opts && opts.failed);
+  const done = !!(opts && opts.done);
+  if (!info.updateAvailable && !applying && !failed && !done && !info.needsAuth) return;
   const main = document.getElementById("hubMain");
   if (!main) return;
   const bar = document.createElement("div");
   bar.id = "hubUpdateBanner";
   bar.className = "hub-update-banner";
   bar.setAttribute("role", "status");
+  let headline = "Mise à jour disponible";
+  if (applying) headline = "Mise à jour…";
+  else if (done) headline = "À jour";
+  else if (failed || info.needsAuth) headline = "Échec de la mise à jour";
   const msg =
     info.message ||
-    `Mise à jour disponible : ${info.local || "?"} → ${info.remote || "?"}`;
+    (applying
+      ? `Téléchargement ${info.local || "?"} → ${info.remote || "?"}`
+      : `Mise à jour disponible : ${info.local || "?"} → ${info.remote || "?"}`);
+  const showManual = (!silent && !applying && !done) || failed || info.needsAuth;
+  let actions = "";
+  if (showManual) {
+    actions = '<div class="hub-update-actions">';
+    if (!info.needsAuth) {
+      actions +=
+        '<button type="button" class="hub-update-btn" id="hubUpdateApply">' +
+        (failed ? "Réessayer" : "Mettre à jour maintenant") +
+        "</button>";
+    }
+    actions +=
+      '<button type="button" class="hub-update-btn hub-update-btn-secondary" id="hubUpdateOpen">Ouvrir Install-Easy</button>';
+    if (!failed && !info.needsAuth && !silent) {
+      actions +=
+        '<button type="button" class="hub-update-dismiss" id="hubUpdateDismiss" aria-label="Fermer">×</button>';
+    }
+    actions += "</div>";
+  }
   bar.innerHTML =
-    `<div class="hub-update-text"><strong>Mise à jour disponible</strong><span></span></div>` +
-    `<div class="hub-update-actions">` +
-    `<button type="button" class="hub-update-btn" id="hubUpdateApply">Mettre à jour maintenant</button>` +
-    `<button type="button" class="hub-update-btn hub-update-btn-secondary" id="hubUpdateOpen">Ouvrir Install-Easy</button>` +
-    `<button type="button" class="hub-update-dismiss" id="hubUpdateDismiss" aria-label="Fermer">×</button>` +
-    `</div>`;
+    '<div class="hub-update-text"><strong></strong><span></span></div>' + actions;
+  bar.querySelector("strong").textContent = headline;
   bar.querySelector(".hub-update-text span").textContent = msg;
   main.insertBefore(bar, main.firstChild);
   document.getElementById("hubUpdateDismiss")?.addEventListener("click", dismissUpdateBanner);
@@ -92,30 +117,54 @@ function showUpdateBanner(info) {
       if (a && typeof a.open_update === "function") await a.open_update();
     } catch (_) {}
   });
-
   document.getElementById("hubUpdateApply")?.addEventListener("click", async () => {
-    const a = apiRoot();
-    const btn = document.getElementById("hubUpdateApply");
-    if (btn) { btn.disabled = true; btn.textContent = "Téléchargement…"; }
-    try {
-      if (a && typeof a.apply_update === "function") {
-        const r = await a.apply_update();
-        if (r?.ok) {
-          if (btn) btn.textContent = r.restartRequired ? "Redémarrage…" : "OK — relance le hub";
-          if (r.restartRequired) {
-            try { window.close(); } catch (_) {}
-          }
-        } else if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Réessayer";
-          alert(r?.error || "Mise à jour échouée");
-        }
-      }
-    } catch (e) {
-      if (btn) { btn.disabled = false; btn.textContent = "Réessayer"; }
-    }
+    await runHubApply(true);
   });
+}
 
+async function runHubApply(force) {
+  const a = apiRoot();
+  if (!a || typeof a.apply_update !== "function") return;
+  showUpdateBanner(
+    { updateAvailable: true, message: "Téléchargement…" },
+    { silent: !force, applying: true }
+  );
+  try {
+    const r = await a.apply_update(!!force);
+    if (r?.skipped) {
+      dismissUpdateBanner();
+      return;
+    }
+    if (r?.ok) {
+      const restart = !!r.restartRequired;
+      showUpdateBanner(
+        {
+          updateAvailable: true,
+          message: r.message || (restart ? "Redémarrage…" : "À jour"),
+        },
+        { silent: true, applying: restart, done: !restart }
+      );
+      if (restart) {
+        try {
+          window.close();
+        } catch (_) {}
+      }
+    } else {
+      showUpdateBanner(
+        {
+          updateAvailable: true,
+          message: r?.error || "Échec",
+          needsAuth: r?.action === "install_easy",
+        },
+        { failed: true }
+      );
+    }
+  } catch (e) {
+    showUpdateBanner(
+      { updateAvailable: true, message: String(e && e.message ? e.message : e) },
+      { failed: true }
+    );
+  }
 }
 
 async function loadVersionAndUpdates() {
@@ -130,52 +179,28 @@ async function loadVersionAndUpdates() {
   try {
     if (typeof a.check_for_update === "function") {
       const u = await a.check_for_update();
+      if (u?.needsAuth) {
+        showUpdateBanner(
+          {
+            updateAvailable: true,
+            needsAuth: true,
+            message: u.error || "Connexion GitHub requise",
+          },
+          { failed: true }
+        );
+        return;
+      }
       if (u?.ok && u.updateAvailable) {
-        showUpdateBanner(u);
-        if (u.canSelfUpdate && u.autoUpdate !== false && typeof a.apply_update === "function") {
-          const btn = document.getElementById("hubUpdateApply");
-          if (btn) { btn.disabled = true; btn.textContent = "Téléchargement…"; }
-          const r = await a.apply_update();
-          if (r?.ok) {
-            if (btn) btn.textContent = r.restartRequired ? "Redémarrage…" : "OK — relance le hub";
-            if (r.restartRequired) {
-              try { window.close(); } catch (_) {}
-            }
-          } else if (btn) {
-            btn.disabled = false;
-            btn.textContent = "Réessayer";
-          }
-        }
+        const silent = !!(
+          u.canSelfUpdate &&
+          u.autoUpdate !== false &&
+          typeof a.apply_update === "function"
+        );
+        if (silent) await runHubApply(false);
+        else showUpdateBanner(u, { silent: false });
       }
     }
   } catch (_) {}
-}
-
-async function setTitle(viewId, segmentLabel) {
-  currentSegment = segmentLabel || "";
-  let title;
-  if (viewId === "dashboard" || !viewId) {
-    title = homeTitle();
-  } else if (segmentLabel) {
-    title = `${HUB_NAME} [${segmentLabel}]`;
-  } else {
-    title = TITLES[viewId] || homeTitle();
-  }
-  await applyTitle(title);
-}
-
-function setActiveNav(viewId) {
-  document.querySelectorAll(".hub-nav-item").forEach((btn) => {
-    const on = btn.dataset.view === viewId;
-    btn.classList.toggle("is-active", on);
-    btn.setAttribute("aria-current", on ? "page" : "false");
-  });
-}
-
-function replayEnter(el) {
-  el.classList.remove("is-enter");
-  void el.offsetWidth;
-  el.classList.add("is-enter");
 }
 
 async function showView(viewId) {

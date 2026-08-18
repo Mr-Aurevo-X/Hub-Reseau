@@ -1,9 +1,9 @@
 {
-  "suiteVersion": "v1.4.3",
-  "tag": "v1.4.3",
+  "suiteVersion": "v1.4.4",
+  "tag": "v1.4.4",
   "hub": "reseau",
   "repo": "Mr-Aurevo-X/MrAurevoX-Launcher",
   "packs": {
-    "hub-reseau": "v1.4.3"
+    "hub-reseau": "v1.4.4"
   }
 }

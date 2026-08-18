@@ -11,12 +11,22 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
+
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover — hubs are Windows-only
+    msvcrt = None  # type: ignore[assignment]
+
+_CHUNK = 1024 * 1024
+_LOCK_TIMEOUT_S = 5.0
 
 RELEASE_REPO_DEFAULT = "Mr-Aurevo-X/MrAurevoX-Launcher"
 _ALLOWED_RELEASE_REPOS = frozenset({RELEASE_REPO_DEFAULT})
@@ -139,6 +149,21 @@ def read_auto_update_setting(*search_roots: Path) -> bool:
         if isinstance(data, dict) and "autoUpdate" in data:
             return bool(data["autoUpdate"])
     return True
+
+
+def _coerce_bool(val: object, default: bool = False) -> bool:
+    if isinstance(val, bool):
+        return val
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return bool(val)
+    s = str(val).strip().lower()
+    if s in ("1", "true", "yes"):
+        return True
+    if s in ("0", "false", "no", ""):
+        return False
+    return default
 
 
 def expected_asset_sha256(catalog: dict | None, name: str) -> tuple[str | None, bool]:
@@ -555,7 +580,6 @@ def _finish_hub_update_script(
         "echo Finalisation mise a jour hub...",
         "timeout /t 2 /nobreak >nul",
         f'if exist "{staging}\\{exe_name}" copy /Y "{staging}\\{exe_name}" ".\\" >nul',
-        f'if exist "{staging}\\version.json" copy /Y "{staging}\\version.json" ".\\" >nul',
         f'rmdir /S /Q "{staging}" 2>nul',
         f'del /F /Q "{script.name}" 2>nul',
         f'start "" "{exe_name}"',
@@ -566,36 +590,107 @@ def _finish_hub_update_script(
     return script
 
 
-def _download_asset_bytes(
-    asset: dict, token: str | None, *, catalog: dict | None = None, asset_name: str | None = None
-) -> bytes:
+def _download_asset_to_file(
+    asset: dict,
+    token: str | None,
+    dest: Path,
+    *,
+    catalog: dict | None = None,
+    asset_name: str | None = None,
+    min_size: int = 1024,
+) -> None:
+    """Stream an allowlisted GitHub asset to dest; hash incrementally; promote only on success."""
     url = asset.get("url") or asset.get("browser_download_url")
     if not url:
         raise RuntimeError("Asset sans URL")
-    name = asset_name or str(asset.get("name") or "")
+    name = asset_name or str(asset.get("name") or dest.name)
     expected, require = expected_asset_sha256(catalog, name)
+    if require and not expected:
+        raise RuntimeError(f"SHA-256 manquant dans le catalog pour {name}")
+    headers = {
+        "Accept": "application/octet-stream",
+        "User-Agent": "PC-Command-HubUpdate",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     if "api.github.com" in str(url):
-        data = _api_request(str(url), token, accept="application/octet-stream")
+        _assert_allowed_url(str(url))
     else:
         _assert_allowed_download_url(str(url))
-        headers = {
-            "Accept": "application/octet-stream",
-            "User-Agent": "PC-Command-HubUpdate",
-        }
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        req = urllib.request.Request(str(url), headers=headers)
+    req = urllib.request.Request(str(url), headers=headers)
+    part = dest.with_suffix(dest.suffix + ".part")
+    try:
+        if part.exists():
+            part.unlink()
         with urllib.request.urlopen(req, timeout=300) as resp:  # nosec B310
             final = resp.geturl() or str(url)
-            _assert_allowed_download_url(final)
-            data = resp.read()
-    if require:
-        if not expected:
-            raise RuntimeError(f"SHA-256 manquant dans le catalog pour {name}")
-        got = hashlib.sha256(data).hexdigest()
-        if got.lower() != expected.lower():
+            if "api.github.com" in str(url) and final != url:
+                _assert_allowed_download_url(final)
+            elif final != url:
+                _assert_allowed_download_url(final)
+            hasher = hashlib.sha256()
+            total = 0
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with part.open("wb") as out:
+                while True:
+                    chunk = resp.read(_CHUNK)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    hasher.update(chunk)
+                    total += len(chunk)
+        if total < min_size:
+            raise RuntimeError(f"Téléchargement vide ou trop petit pour {name}")
+        if require and hasher.hexdigest().lower() != str(expected).lower():
             raise RuntimeError(f"SHA-256 mismatch pour {name}")
-    return data
+        part.replace(dest)
+    except Exception:
+        try:
+            part.unlink(missing_ok=True)
+        except OSError:
+            pass
+        try:
+            dest.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+@contextmanager
+def _version_lock(install_dir: Path) -> Iterator[None]:
+    """Exclusive lock around version.json writes (Windows msvcrt)."""
+    Path(install_dir).mkdir(parents=True, exist_ok=True)
+    lock_path = Path(install_dir) / ".version.lock"
+    fh = lock_path.open("a+b")
+    if fh.seek(0, 2) == 0:
+        fh.write(b"\0")
+        fh.flush()
+    locked = False
+    deadline = time.monotonic() + _LOCK_TIMEOUT_S
+    try:
+        if msvcrt is None:
+            yield
+            return
+        while True:
+            try:
+                fh.seek(0)
+                msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+                locked = True
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Timeout verrou version.json")
+                time.sleep(0.05)
+        yield
+    finally:
+        if locked and msvcrt is not None:
+            try:
+                fh.seek(0)
+                msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+        fh.close()
 
 
 def write_pack_stamp(
@@ -605,29 +700,28 @@ def write_pack_stamp(
     catalog: dict | None = None,
 ) -> None:
     path = Path(install_dir) / "version.json"
-    existing: dict = {}
-    if path.is_file():
-        try:
-            loaded = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                existing = loaded
-        except (OSError, json.JSONDecodeError):
-            existing = {}
-    suite = str((catalog or {}).get("suiteVersion") or tag or "").strip() or tag
-    payload = dict(existing)
-    payload["tag"] = tag
-    payload["suiteVersion"] = suite
-    packs = payload.get("packs")
-    if not isinstance(packs, dict):
-        packs = {}
-    if pack_id:
-        packs[str(pack_id).lower()] = suite
-    payload["packs"] = packs
-    try:
-        Path(install_dir).mkdir(parents=True, exist_ok=True)
+    with _version_lock(install_dir):
+        existing: dict = {}
+        if path.is_file():
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    existing = loaded
+            except (OSError, json.JSONDecodeError):
+                existing = {}
+        suite = str((catalog or {}).get("suiteVersion") or tag or "").strip() or tag
+        payload = dict(existing)
+        payload["tag"] = tag
+        payload["suiteVersion"] = suite
+        packs = payload.get("packs")
+        if not isinstance(packs, dict):
+            packs = {}
+        else:
+            packs = dict(packs)
+        if pack_id:
+            packs[str(pack_id).lower()] = suite
+        payload["packs"] = packs
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    except OSError:
-        pass
 
 
 def apply_hub_update(
@@ -636,6 +730,7 @@ def apply_hub_update(
     *,
     token: str | None = None,
     repo: str | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Download allowlisted Launch-Hub-*.zip and replace the local hub exe in-place."""
     hub_key = normalize_hub_id(hub_id)
@@ -658,6 +753,17 @@ def apply_hub_update(
             }
 
     roots = version_search_roots(app_dir)
+    if not _coerce_bool(force, False):
+        auto = read_auto_update_setting(*roots, install_dir, default_install_dir())
+        if not auto:
+            return {
+                "ok": True,
+                "skipped": True,
+                "updated": False,
+                "reason": "autoUpdateOff",
+                "message": "Mises à jour automatiques désactivées.",
+            }
+
     tok = token if token is not None else find_token(*roots, install_dir, default_install_dir())
     if not tok:
         return {
@@ -699,18 +805,16 @@ def apply_hub_update(
             shutil.rmtree(staging, ignore_errors=True)
         staging.mkdir(parents=True, exist_ok=True)
 
-        raw = _download_asset_bytes(asset, tok, catalog=catalog, asset_name=asset_name)
-        if not raw or len(raw) < 1024:
-            return {"ok": False, "error": "Téléchargement vide ou trop petit"}
         fd, tmp_name = tempfile.mkstemp(prefix="hub-upd-", suffix=".zip")
         os.close(fd)
         zip_path = Path(tmp_name)
-        zip_path.write_bytes(raw)
+        _download_asset_to_file(
+            asset, tok, zip_path, catalog=catalog, asset_name=asset_name, min_size=1024
+        )
         _safe_extract(zip_path, staging)
 
         staged_exe = staging / exe_name
         if not staged_exe.is_file():
-            # zip may nest a single folder
             found = list(staging.rglob(exe_name))
             if not found:
                 return {
@@ -718,20 +822,13 @@ def apply_hub_update(
                     "error": f"{exe_name} introuvable dans {asset_name}",
                 }
             staged_exe = found[0]
-            # Flatten into staging root for the finish script
             if staged_exe.parent != staging:
                 shutil.copy2(staged_exe, staging / exe_name)
-                ver_src = staged_exe.parent / "version.json"
-                if ver_src.is_file():
-                    shutil.copy2(ver_src, staging / "version.json")
 
         target_exe = install_dir / exe_name
         if not _is_locked(target_exe):
             try:
                 shutil.copy2(staging / exe_name, target_exe)
-                ver_stage = staging / "version.json"
-                if ver_stage.is_file():
-                    shutil.copy2(ver_stage, install_dir / "version.json")
                 write_pack_stamp(install_dir, pack_id, tag, catalog)
                 shutil.rmtree(staging, ignore_errors=True)
                 return {
@@ -746,7 +843,6 @@ def apply_hub_update(
                 pass
 
         write_pack_stamp(install_dir, pack_id, tag, catalog)
-        write_pack_stamp(staging, pack_id, tag, catalog)
         script = _finish_hub_update_script(install_dir, staging, exe_name)
         try:
             subprocess.Popen(
@@ -775,5 +871,10 @@ def apply_hub_update(
         if zip_path is not None:
             try:
                 zip_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            part = zip_path.with_suffix(zip_path.suffix + ".part")
+            try:
+                part.unlink(missing_ok=True)
             except OSError:
                 pass
