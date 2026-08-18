@@ -130,7 +130,23 @@ async function loadVersionAndUpdates() {
   try {
     if (typeof a.check_for_update === "function") {
       const u = await a.check_for_update();
-      if (u?.ok && u.updateAvailable) showUpdateBanner(u);
+      if (u?.ok && u.updateAvailable) {
+        showUpdateBanner(u);
+        if (u.canSelfUpdate && u.autoUpdate !== false && typeof a.apply_update === "function") {
+          const btn = document.getElementById("hubUpdateApply");
+          if (btn) { btn.disabled = true; btn.textContent = "Téléchargement…"; }
+          const r = await a.apply_update();
+          if (r?.ok) {
+            if (btn) btn.textContent = r.restartRequired ? "Redémarrage…" : "OK — relance le hub";
+            if (r.restartRequired) {
+              try { window.close(); } catch (_) {}
+            }
+          } else if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Réessayer";
+          }
+        }
+      }
     }
   } catch (_) {}
 }

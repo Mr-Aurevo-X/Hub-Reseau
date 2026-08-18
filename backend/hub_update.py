@@ -4,6 +4,7 @@ Allowlist matches Install-Easy release_client (MrAurevoX-Launcher only).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -124,6 +125,46 @@ def default_install_dir() -> Path:
     return Path(local) / "MrAurevoX"
 
 
+def read_auto_update_setting(*search_roots: Path) -> bool:
+    for root in search_roots:
+        if not root:
+            continue
+        path = Path(root) / "user-settings.json"
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict) and "autoUpdate" in data:
+            return bool(data["autoUpdate"])
+    return True
+
+
+def expected_asset_sha256(catalog: dict | None, name: str) -> tuple[str | None, bool]:
+    hashes = (catalog or {}).get("assetHashes") if catalog else None
+    if not isinstance(hashes, dict):
+        return None, False
+    nonempty = {str(k): str(v).strip() for k, v in hashes.items() if str(v or "").strip()}
+    if not nonempty:
+        return None, False
+    key = str(name or "").strip()
+    if key.lower() == CATALOG_ASSET.lower():
+        return None, False
+    raw = nonempty.get(key) or nonempty.get(key.lower()) or ""
+    if raw.lower().startswith("sha256:"):
+        raw = raw[7:].strip()
+    return (raw or None), True
+
+
+def running_from_source_tree(path: Path) -> bool:
+    lowered = str(Path(path).resolve()).lower().replace("/", "\\")
+    needle = f"\\{lowered}\\"
+    if "\\dev central tree\\" not in needle:
+        return False
+    return "\\01_hubs\\" in needle or "\\atelierwindows\\" in needle
+
+
 def _assert_allowed_url(url: str) -> None:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https":
@@ -152,7 +193,7 @@ def _api_request(url: str, token: str | None = None, *, accept: str | None = Non
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:  # nosec B310
         final = resp.geturl()
         if final and final != url:
             if accept == "application/octet-stream":
@@ -178,7 +219,7 @@ def format_version_bracket(version: str | None) -> str:
     return normalize_version(version) or ""
 
 
-def read_local_version(*search_roots: Path) -> str | None:
+def read_local_version(*search_roots: Path, pack_id: str | None = None) -> str | None:
     """Read suite/tag from version.json under the first matching root."""
     for root in search_roots:
         if not root:
@@ -189,6 +230,14 @@ def read_local_version(*search_roots: Path) -> str | None:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        if pack_id:
+            packs = data.get("packs")
+            if isinstance(packs, dict):
+                stamped = str(packs.get(str(pack_id).lower()) or "").strip()
+                if stamped:
+                    return normalize_version(stamped) or stamped
+            # Pack installed but no per-pack stamp → treat as unknown (outdated)
             continue
         tag = str(
             data.get("suiteVersion") or data.get("tag") or data.get("version") or ""
@@ -274,7 +323,7 @@ def _catalog_from_release(release: dict, token: str | None) -> dict | None:
         headers["Authorization"] = f"Bearer {token}"
     _assert_allowed_url(str(url))
     req = urllib.request.Request(str(url), headers=headers)
-    with urllib.request.urlopen(req, timeout=25) as resp:
+    with urllib.request.urlopen(req, timeout=25) as resp:  # nosec B310
         final = resp.geturl() or str(url)
         _assert_allowed_download_url(final)
         raw = resp.read()
@@ -301,8 +350,13 @@ def check_hub_update(
         }
 
     roots = version_search_roots(app_dir)
-    local = read_local_version(*roots)
+    pack_id = HUB_PACK_IDS.get(hub_key)
+    local = read_local_version(*roots, pack_id=pack_id)
     tok = token if token is not None else find_token(*roots, default_install_dir())
+    auto_update = read_auto_update_setting(*roots, default_install_dir())
+    from_sot = running_from_source_tree(app_dir)
+    if getattr(sys, "frozen", False):
+        from_sot = from_sot or running_from_source_tree(Path(sys.executable).parent)
 
     try:
         release = json.loads(_api_request(api_latest_url(repo), tok).decode("utf-8"))
@@ -347,6 +401,7 @@ def check_hub_update(
     assets = {str(a.get("name") or ""): a for a in (release.get("assets") or [])}
     has_asset = asset_name in assets
     update_available = bool(remote) and (local or "") != remote and has_asset
+    can_self = bool(update_available and has_asset and not from_sot)
 
     return {
         "ok": True,
@@ -361,8 +416,10 @@ def check_hub_update(
         "hasAsset": has_asset,
         "tag": tag,
         "repo": resolve_release_repo(repo),
-        "action": "download" if update_available else "install_easy",
-        "canSelfUpdate": bool(update_available and has_asset),
+        "action": "download" if can_self else "install_easy",
+        "canSelfUpdate": can_self,
+        "autoUpdate": auto_update,
+        "fromSourceTree": from_sot,
         "releaseUrl": (
             f"https://github.com/{resolve_release_repo(repo)}/releases/latest"
         ),
@@ -509,24 +566,68 @@ def _finish_hub_update_script(
     return script
 
 
-def _download_asset_bytes(asset: dict, token: str | None) -> bytes:
+def _download_asset_bytes(
+    asset: dict, token: str | None, *, catalog: dict | None = None, asset_name: str | None = None
+) -> bytes:
     url = asset.get("url") or asset.get("browser_download_url")
     if not url:
         raise RuntimeError("Asset sans URL")
+    name = asset_name or str(asset.get("name") or "")
+    expected, require = expected_asset_sha256(catalog, name)
     if "api.github.com" in str(url):
-        return _api_request(str(url), token, accept="application/octet-stream")
-    _assert_allowed_download_url(str(url))
-    headers = {
-        "Accept": "application/octet-stream",
-        "User-Agent": "PC-Command-HubUpdate",
-    }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(str(url), headers=headers)
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        final = resp.geturl() or str(url)
-        _assert_allowed_download_url(final)
-        return resp.read()
+        data = _api_request(str(url), token, accept="application/octet-stream")
+    else:
+        _assert_allowed_download_url(str(url))
+        headers = {
+            "Accept": "application/octet-stream",
+            "User-Agent": "PC-Command-HubUpdate",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(str(url), headers=headers)
+        with urllib.request.urlopen(req, timeout=300) as resp:  # nosec B310
+            final = resp.geturl() or str(url)
+            _assert_allowed_download_url(final)
+            data = resp.read()
+    if require:
+        if not expected:
+            raise RuntimeError(f"SHA-256 manquant dans le catalog pour {name}")
+        got = hashlib.sha256(data).hexdigest()
+        if got.lower() != expected.lower():
+            raise RuntimeError(f"SHA-256 mismatch pour {name}")
+    return data
+
+
+def write_pack_stamp(
+    install_dir: Path,
+    pack_id: str | None,
+    tag: str,
+    catalog: dict | None = None,
+) -> None:
+    path = Path(install_dir) / "version.json"
+    existing: dict = {}
+    if path.is_file():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                existing = loaded
+        except (OSError, json.JSONDecodeError):
+            existing = {}
+    suite = str((catalog or {}).get("suiteVersion") or tag or "").strip() or tag
+    payload = dict(existing)
+    payload["tag"] = tag
+    payload["suiteVersion"] = suite
+    packs = payload.get("packs")
+    if not isinstance(packs, dict):
+        packs = {}
+    if pack_id:
+        packs[str(pack_id).lower()] = suite
+    payload["packs"] = packs
+    try:
+        Path(install_dir).mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
 
 
 def apply_hub_update(
@@ -582,6 +683,14 @@ def apply_hub_update(
             "action": "install_easy",
         }
 
+    catalog = None
+    try:
+        catalog = _catalog_from_release(release, tok)
+    except Exception:
+        catalog = None
+    pack_id = HUB_PACK_IDS.get(hub_key)
+    tag = str(release.get("tag_name") or "")
+
     staging = install_dir / "_hub_update_staging"
     zip_path: Path | None = None
     try:
@@ -590,7 +699,7 @@ def apply_hub_update(
             shutil.rmtree(staging, ignore_errors=True)
         staging.mkdir(parents=True, exist_ok=True)
 
-        raw = _download_asset_bytes(asset, tok)
+        raw = _download_asset_bytes(asset, tok, catalog=catalog, asset_name=asset_name)
         if not raw or len(raw) < 1024:
             return {"ok": False, "error": "Téléchargement vide ou trop petit"}
         fd, tmp_name = tempfile.mkstemp(prefix="hub-upd-", suffix=".zip")
@@ -623,18 +732,21 @@ def apply_hub_update(
                 ver_stage = staging / "version.json"
                 if ver_stage.is_file():
                     shutil.copy2(ver_stage, install_dir / "version.json")
+                write_pack_stamp(install_dir, pack_id, tag, catalog)
                 shutil.rmtree(staging, ignore_errors=True)
                 return {
                     "ok": True,
                     "restartRequired": False,
                     "installDir": str(install_dir),
                     "exe": exe_name,
-                    "tag": str(release.get("tag_name") or ""),
+                    "tag": tag,
                     "message": "Mise à jour appliquée. Relance le hub pour activer.",
                 }
             except OSError:
                 pass
 
+        write_pack_stamp(install_dir, pack_id, tag, catalog)
+        write_pack_stamp(staging, pack_id, tag, catalog)
         script = _finish_hub_update_script(install_dir, staging, exe_name)
         try:
             subprocess.Popen(
@@ -653,7 +765,7 @@ def apply_hub_update(
             "installDir": str(install_dir),
             "exe": exe_name,
             "finishScript": str(script),
-            "tag": str(release.get("tag_name") or ""),
+            "tag": tag,
             "message": "Mise à jour téléchargée — le hub va redémarrer.",
         }
     except Exception as exc:  # noqa: BLE001
