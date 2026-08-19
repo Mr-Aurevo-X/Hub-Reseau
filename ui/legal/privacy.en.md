@@ -1,27 +1,30 @@
-Privacy Policy / GDPR — Mr-Aurevo-X Suite (Atelier)
-Publisher: Mr-Aurevo-X · Entry product: Atelier (Atelier)
+Privacy Policy / GDPR — PC Command / Mr-Aurevo-X Suite
+Publisher: Mr-Aurevo-X · Product: PC Command
+Copyright © 2026 Mr-Aurevo-X. All rights reserved.
 
-1. Scope
-This policy covers Atelier and **all Suite tools** available through Atelier. It replaces any former in-app legal “About” panels. Apps keep a **visible copyright** and refer to Atelier for Terms / Privacy.
+1. Publisher collection: none
+Mr-Aurevo-X does not collect personal data on its servers. No analytics tracker, no crash-reporting telemetry, no user account, no background data mining.
 
-2. Principles
-Processing is **local** on your machine. Mr-Aurevo-X does not collect personal data on servers, does not use remote analytics, and does not require an account. The Suite is **100% free**; data is not monetized.
+Because the publisher does not gather, process, store, or transmit personal data to any Mr-Aurevo-X server, GDPR rights that assume a publisher-side filing do not apply. You may uninstall and delete local settings anytime.
 
-3. Locally stored data
-Preferences (language, accent, theme, skill level, favorites): install folder and/or %LOCALAPPDATA%\Mr-Aurevo-X. Tool files and results: where you save them.
+2. Local-first architecture
+Local execution (Python + WebView2). Preferences: install folder and/or %LOCALAPPDATA%\Mr-Aurevo-X. Outputs: where you save them.
 
-4. Sensitive-tool nuances (always local)
-- WifiKey / network secrets: shows keys already on the PC; not sent via Mr-Aurevo-X.
-- ClipBoard / snippets: clipboard content handled locally.
-- Cleanup / uninstall / files: lists and deletions on local paths you confirm.
-- Mapping: the app core stays local, but geocoding / routing may call third-party map APIs (addresses and routes may leave this PC) — also noted in Mapping’s copyright.
-No other processing is uploaded to Mr-Aurevo-X.
+The Suite is not “100% local” as a whole: some modules use the network when you use them. Showcase apps with no network calls may say so in their README.
 
-5. Network
-No automatic updates and **no commitment to future versions**. Any network use is limited to the tool’s purpose (e.g. contacting addresses you enter) and local UI needs.
+3. Network exceptions (not publisher telemetry)
+- Hub update (opt-in): api.github.com / github.com / GitHub release assets.
+- Trad-X: Google Translate via deep_translator — text leaves this PC.
+- RoadWay-X reputation (opt-in): URLhaus / AbuseIPDB (+ VirusTotal / Talos links).
+- NetAdmin / NetMap tests: hosts you type.
+- Accueil metrics: 127.0.0.1 only.
+- Discord / PayPal / Revolut buttons: those operators’ sites.
 
-6. GDPR
-Without collection by the publisher, most server-side access/erasure rights do not apply. You may uninstall Atelier / tools and delete local settings anytime.
+WifiKey shows keys already on the PC; they are not sent to Mr-Aurevo-X. Clipboard / cleanup / uninstall: local paths you confirm.
 
-7. Contact
-GitHub organization Mr-Aurevo-X.
+4. Support links
+Opening Discord / PayPal / Revolut leaves the app. Those services’ privacy policies apply.
+
+5. Contact
+GitHub: https://github.com/Mr-Aurevo-X
+Discord (optional): https://discord.com/users/406891052516114442

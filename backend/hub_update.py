@@ -1,5 +1,9 @@
-"""Hub / suite update check + in-place Launch-Hub zip download/replace.
+"""Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
 
+SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
+Hub / suite update check + in-place Launch-Hub zip download/replace.
 Allowlist matches Install-Easy release_client (PCCommand-Releases + legacy MrAurevoX-Launcher).
 """
 from __future__ import annotations
@@ -45,6 +49,21 @@ _ALLOWED_DOWNLOAD_HOSTS = _ALLOWED_API_HOSTS | {
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",
 }
+
+# Optional Discord / donation links (user-initiated; not GitHub updates).
+SUPPORT_URLS: dict[str, str] = {
+    "discord": "https://discord.com/users/406891052516114442",
+    "paypal": "https://www.paypal.com/paypalme/aurevo1",
+    "revolut": "https://revolut.me/mr_aurevo_x",
+}
+_ALLOWED_SUPPORT_HOSTS = frozenset(
+    {
+        "discord.com",
+        "www.paypal.com",
+        "paypal.com",
+        "revolut.me",
+    }
+)
 CATALOG_ASSET = "catalog.json"
 
 HUB_INSTALL_DIR = "PCCommand"
@@ -548,6 +567,23 @@ def open_url(url: str) -> dict[str, Any]:
     try:
         os.startfile(url)  # type: ignore[attr-defined]
         return {"ok": True, "url": url}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "url": url}
+
+
+def open_support_url(kind: str) -> dict[str, Any]:
+    """Open Discord / PayPal / Revolut in the default browser (allowlisted)."""
+    key = (kind or "").strip().lower()
+    url = SUPPORT_URLS.get(key)
+    if not url:
+        return {"ok": False, "error": f"unknown support kind: {kind!r}"}
+    parsed = urllib.parse.urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or host not in _ALLOWED_SUPPORT_HOSTS:
+        return {"ok": False, "error": "support URL rejected"}
+    try:
+        os.startfile(url)  # type: ignore[attr-defined]
+        return {"ok": True, "kind": key, "url": url}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc), "url": url}
 

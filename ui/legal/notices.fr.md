@@ -1,15 +1,16 @@
-Licences / notices — Suite Mr-Aurevo-X (Atelier / Atelier)
+Licences / notices — PC Command / Suite Mr-Aurevo-X (PC Command)
 
-Ce document s’applique à Atelier et aux outils de la Suite fournis avec ou via Atelier.
+Code Mr-Aurevo-X : PolyForm Noncommercial License 1.0.0 (`LICENSE`). Marque : `TRADEMARK.md`.
 
-Composants tiers possibles (selon l’outil), notamment :
-- Python et Python Software Foundation License
+Composants tiers possibles (selon l’outil) :
+- Python (PSF License)
 - pywebview
 - Microsoft Edge WebView2 Runtime
 - PyInstaller
-- Tauri / dépendances web (ColorPicker et apps similaires)
-- Outfit / JetBrains Mono (licences de polices respectives)
+- psutil
+- deep_translator / Google Translate (Trad-X uniquement)
+- Outfit / JetBrains Mono (licences de polices)
 
-Les licences upstream s’appliquent à ces composants. Le code Suite Mr-Aurevo-X reste sous les termes de l’éditeur.
+Les licences amont s’appliquent à ces composants.
 
-La Suite est 100 % gratuite, sans mise à jour automatique et sans engagement de versions futures.
+Suite fournie sans mise à jour automatique et sans engagement de versions futures.

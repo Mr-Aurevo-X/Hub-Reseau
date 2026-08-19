@@ -1,7 +1,7 @@
 # Terms of Use — PC Command / Mr-Aurevo-X Suite
 
 Publisher: Mr-Aurevo-X  
-Product: PC Command  
+Product: {{PRODUCT}}  
 Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
 
 These terms apply to **PC Command** hubs, Install-Easy, standalones, and showcase apps branded Mr-Aurevo-X. In-app About panels show the same kit. The English `LICENSE` (PolyForm Noncommercial 1.0.0) is the license grant. These terms add operational rules. They are not a second license.

@@ -1,7 +1,7 @@
 # Conditions générales d’utilisation — PC Command / Suite Mr-Aurevo-X
 
 Éditeur : Mr-Aurevo-X  
-Produit : PC Command  
+Produit : {{PRODUCT}}  
 Copyright (c) 2026 Mr-Aurevo-X. Tous droits réservés.
 
 Les présentes CGU s’appliquent aux hubs **PC Command**, à Install-Easy, aux standalones et aux apps vitrine sous marque Mr-Aurevo-X. Le fichier anglais `LICENSE` (PolyForm Noncommercial 1.0.0) est la licence. Ce document ajoute les règles d’usage. Ce n’est pas une seconde licence.

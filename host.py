@@ -1,6 +1,12 @@
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
 """Hub-Reseau — entry WebView2 (flatten: host.py + backend/)."""
 
 from __future__ import annotations
+
+__author__ = "Mr-Aurevo-X"
 
 import argparse
 import ctypes

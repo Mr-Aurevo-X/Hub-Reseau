@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+ */
+/**
  * Hub-Reseau shell — Dashboard boot + lazy modules + sidebar collapsible.
  */
 const HUB_NAME = "PC Command | Network";
@@ -279,6 +284,18 @@ function wireSidebar() {
     if (label) label.textContent = collapsed ? "Étendre" : "Réduire";
     const ico = btn.querySelector(".hub-nav-ico");
     if (ico) ico.textContent = collapsed ? "▸" : "◂";
+  });
+
+  document.querySelector(".hub-support")?.addEventListener("click", async (ev) => {
+    const supportBtn = ev.target.closest("[data-support]");
+    if (!supportBtn) return;
+    const kind = supportBtn.dataset.support;
+    const a = apiRoot();
+    try {
+      if (a && typeof a.open_support_url === "function") {
+        await a.open_support_url(kind);
+      }
+    } catch (_) {}
   });
 }
 

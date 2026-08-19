@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+ */
+/**
  * RoadWay-X — native in-hub (no iframe). SoT: Lab/RoadWay-X
  * Bridge: pywebview.api.roadway.*
  * Segments: Trafic | À trancher | Alertes | Règles | DNS

@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
 """SiteCheck — HTTP/HTTPS site health (absorbed into NetMap)."""
 
 from __future__ import annotations

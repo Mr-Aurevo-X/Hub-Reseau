@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+ */
 /* Hub-Systeme shell — sidebar collapsible + Fade&Slide + skeletons */
 
 *,
@@ -164,6 +169,51 @@ body {
   line-height: 1.35;
   color: var(--muted);
   padding: 0 0.35rem;
+}
+
+.hub-support {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0 0.2rem;
+}
+
+.hub-support-note {
+  margin: 0;
+  font-size: 0.64rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.hub-support-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.hub-support-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  font: inherit;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.hub-support-btn:hover {
+  color: var(--text);
+  border-color: var(--accent-glow, var(--accent));
+}
+
+.hub-shell.is-collapsed .hub-support-note {
+  display: none;
+}
+
+.hub-shell.is-collapsed .hub-support-links {
+  flex-direction: column;
 }
 
 .hub-main {
