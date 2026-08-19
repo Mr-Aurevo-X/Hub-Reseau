@@ -603,21 +603,8 @@ class Api(WindowChromeMixin):
             "title": hub_update.title_with_version(HUB_TITLE, ver),
         }
 
-    def check_for_update(self) -> dict:
-        return hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
-
-    def open_update(self) -> dict:
-        info = hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
-        return hub_update.open_update_action(
-            _HUB_ROOT, release_url=info.get("releaseUrl")
-        )
-
     def open_support_url(self, kind: str = "") -> dict:
         return hub_update.open_support_url(kind)
-
-    def apply_update(self, force: bool = False) -> dict:
-        """Download + replace Launch-Hub zip in-place (LOCALAPPDATA install)."""
-        return hub_update.apply_hub_update(HUB_ID, _HUB_ROOT, force=bool(force))
 
     def open_suite_app(self, name: str) -> dict:
         return launch_suite_app(name)

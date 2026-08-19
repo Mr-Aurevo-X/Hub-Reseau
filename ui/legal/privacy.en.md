@@ -13,7 +13,6 @@ Local execution (Python + WebView2). Preferences: install folder and/or %LOCALAP
 The Suite is not “100% local” as a whole: some modules use the network when you use them. Showcase apps with no network calls may say so in their README.
 
 3. Network exceptions (not publisher telemetry)
-- Hub update (opt-in): api.github.com / github.com / GitHub release assets.
 - Trad-X: Google Translate via deep_translator — text leaves this PC.
 - RoadWay-X reputation (opt-in): URLhaus / AbuseIPDB (+ VirusTotal / Talos links).
 - NetAdmin / NetMap tests: hosts you type.
