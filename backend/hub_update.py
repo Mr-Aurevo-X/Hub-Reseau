@@ -57,7 +57,6 @@ HUB_ASSETS: dict[str, str] = {
     "systeme": "Launch-Hub-Systeme.zip",
     "reseau": "Launch-Hub-Reseau.zip",
     "securite": "Launch-Hub-Securite.zip",
-    "dev": "Launch-Hub-Dev.zip",
     "utilitaires": "Launch-Hub-Utilitaires.zip",
 }
 
@@ -65,7 +64,6 @@ HUB_EXES: dict[str, str] = {
     "systeme": "Launch-Hub-Systeme.exe",
     "reseau": "Launch-Hub-Reseau.exe",
     "securite": "Launch-Hub-Securite.exe",
-    "dev": "Launch-Hub-Dev.exe",
     "utilitaires": "Launch-Hub-Utilitaires.exe",
 }
 
@@ -73,7 +71,6 @@ HUB_PACK_IDS: dict[str, str] = {
     "systeme": "hub-systeme",
     "reseau": "hub-reseau",
     "securite": "hub-securite",
-    "dev": "hub-dev",
     "utilitaires": "hub-utilitaires",
 }
 
@@ -84,8 +81,6 @@ _HUB_ALIASES = {
     "reseau": "reseau",
     "security": "securite",
     "securite": "securite",
-    "development": "dev",
-    "dev": "dev",
     "utilities": "utilitaires",
     "utilitaires": "utilitaires",
 }
