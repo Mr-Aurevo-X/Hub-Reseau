@@ -57,9 +57,6 @@ HUB_GITHUB_REPOS: dict[str, str] = {
     "utilitaires": "Mr-Aurevo-X/Hub-Utilitaires",
 }
 
-BINARY_RELEASE_REPO = "Mr-Aurevo-X/PCCommand-Releases"
-_LEGACY_BINARY_RELEASE_REPO = "Mr-Aurevo-X/MrAurevoX-Launcher"
-
 HUB_ZIP_ASSETS: dict[str, str] = {
     "systeme": "Launch-Hub-Systeme.zip",
     "reseau": "Launch-Hub-Reseau.zip",
@@ -213,11 +210,7 @@ def _assert_api_url(url: str) -> None:
 
 
 def _api_latest_release(repo: str) -> dict[str, Any]:
-    allowed = set(HUB_GITHUB_REPOS.values()) | {
-        BINARY_RELEASE_REPO,
-        _LEGACY_BINARY_RELEASE_REPO,
-    }
-    if repo not in allowed:
+    if repo not in set(HUB_GITHUB_REPOS.values()):
         raise ValueError(f"release repo not allowlisted: {repo!r}")
     url = f"https://api.github.com/repos/{repo}/releases/latest"
     _assert_api_url(url)
@@ -253,7 +246,7 @@ def _release_payload(
 
 
 def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
-    """Compare local version.json to GitHub Latest. Never downloads."""
+    """Compare local version.json to GitHub Latest on this hub's own repo. Never downloads."""
     hub_key = normalize_hub_id(hub_id)
     local = get_local_suite_version(app_dir)
     zip_name = HUB_ZIP_ASSETS.get(hub_key)
@@ -266,29 +259,18 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
             "local": local,
         }
 
-    chosen: dict[str, Any] | None = None
     last_err = None
-    for repo in (BINARY_RELEASE_REPO, _LEGACY_BINARY_RELEASE_REPO, hub_repo):
-        try:
-            raw = _api_latest_release(repo)
-            payload = _release_payload(repo, raw, zip_name)
-            if not payload.get("remote"):
-                continue
-            if repo in (BINARY_RELEASE_REPO, _LEGACY_BINARY_RELEASE_REPO):
-                if payload.get("hasZip") or chosen is None:
-                    chosen = payload
-                    if payload.get("hasZip"):
-                        break
-            elif chosen is None:
-                chosen = payload
-        except urllib.error.HTTPError as exc:
-            last_err = f"HTTP {exc.code}"
-            if exc.code in (401, 403, 404):
-                continue
-            break
-        except Exception as exc:  # noqa: BLE001
-            last_err = str(exc)
-            continue
+    try:
+        raw = _api_latest_release(hub_repo)
+        chosen = _release_payload(hub_repo, raw, zip_name)
+        if not chosen.get("remote"):
+            chosen = None
+    except urllib.error.HTTPError as exc:
+        last_err = f"HTTP {exc.code}"
+        chosen = None
+    except Exception as exc:  # noqa: BLE001
+        last_err = str(exc)
+        chosen = None
 
     if not chosen:
         return {
