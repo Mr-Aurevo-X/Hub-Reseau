@@ -100,6 +100,55 @@ async function loadAppVersion() {
       if (v?.version) appVersion = String(v.version);
     }
   } catch (_) {}
+  try {
+    if (typeof a.check_latest_release === "function") {
+      const u = await a.check_latest_release();
+      if (u?.ok && u.updateAvailable) showReleaseBanner(u);
+    }
+  } catch (_) {}
+}
+
+function dismissReleaseBanner() {
+  const el = document.getElementById("hubReleaseBanner");
+  if (el) el.remove();
+}
+
+function showReleaseBanner(info) {
+  dismissReleaseBanner();
+  if (!info || !info.updateAvailable) return;
+  const main = document.getElementById("hubMain");
+  if (!main) return;
+  const remote = String(info.remote || "");
+  try {
+    if (sessionStorage.getItem("hubReleaseDismissed") === remote) return;
+  } catch (_) {}
+  const bar = document.createElement("div");
+  bar.id = "hubReleaseBanner";
+  bar.className = "hub-release-banner";
+  bar.setAttribute("role", "status");
+  const msg = info.message || `Nouvelle version ${info.remote || ""} disponible`;
+  bar.innerHTML =
+    '<div class="hub-release-text"><strong>Nouvelle version</strong><span></span></div>' +
+    '<div class="hub-release-actions">' +
+    '<button type="button" class="hub-release-btn" id="hubReleaseOpen">Ouvrir la release</button>' +
+    '<button type="button" class="hub-release-dismiss" id="hubReleaseDismiss" aria-label="Fermer">×</button>' +
+    "</div>";
+  bar.querySelector(".hub-release-text span").textContent = msg;
+  main.insertBefore(bar, main.firstChild);
+  document.getElementById("hubReleaseDismiss")?.addEventListener("click", () => {
+    try {
+      sessionStorage.setItem("hubReleaseDismissed", remote);
+    } catch (_) {}
+    dismissReleaseBanner();
+  });
+  document.getElementById("hubReleaseOpen")?.addEventListener("click", async () => {
+    const api = apiRoot();
+    try {
+      if (api && typeof api.open_release_page === "function") {
+        await api.open_release_page(info.releaseUrl || "");
+      }
+    } catch (_) {}
+  });
 }
 
 async function showView(viewId) {

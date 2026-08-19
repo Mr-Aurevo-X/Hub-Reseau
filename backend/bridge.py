@@ -606,6 +606,16 @@ class Api(WindowChromeMixin):
     def open_support_url(self, kind: str = "") -> dict:
         return hub_update.open_support_url(kind)
 
+    def check_latest_release(self) -> dict:
+        return hub_update.check_hub_release(HUB_ID, _HUB_ROOT)
+
+    def open_release_page(self, url: str = "") -> dict:
+        target = (url or "").strip()
+        if not target:
+            info = hub_update.check_hub_release(HUB_ID, _HUB_ROOT)
+            target = str(info.get("releaseUrl") or "")
+        return hub_update.open_release_url(target)
+
     def open_suite_app(self, name: str) -> dict:
         return launch_suite_app(name)
 

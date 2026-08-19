@@ -13,6 +13,7 @@ Exécution locale (Python + WebView2). Préférences : dossier d’installation 
 La Suite n’est pas « 100 % locale » dans son ensemble : certains modules utilisent le réseau quand vous les utilisez. Les apps vitrine sans appel réseau peuvent l’indiquer dans leur README.
 
 3. Exceptions réseau (pas de télémétrie éditeur)
+- Notification de release hub : comparaison de version locale vs GitHub Latest (pas de téléchargement).
 - Trad-X : Google Translate via deep_translator — le texte quitte le PC.
 - RoadWay-X réputation (opt-in) : URLhaus / AbuseIPDB (+ liens VirusTotal / Talos).
 - Tests NetAdmin / NetMap : hôtes que vous saisissez.
