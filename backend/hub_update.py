@@ -202,12 +202,24 @@ def expected_asset_sha256(catalog: dict | None, name: str) -> tuple[str | None, 
     return (raw or None), True
 
 
+def running_from_dev_central_tree(path: Path) -> bool:
+    lowered = str(Path(path).resolve()).lower().replace("/", "\\")
+    return "\\dev central tree\\" in lowered
+
+
 def running_from_source_tree(path: Path) -> bool:
     lowered = str(Path(path).resolve()).lower().replace("/", "\\")
-    needle = f"\\{lowered}\\"
-    if "\\dev central tree\\" not in needle:
+    if not running_from_dev_central_tree(path):
         return False
-    return "\\01_hubs\\" in needle or "\\atelierwindows\\" in needle
+    if "\\01_hubs\\" in lowered or "\\atelierwindows\\" in lowered:
+        return True
+    # Launch-Hub-*.exe rebuilt at Dev Central Tree root (dev / smoke / capture)
+    if getattr(sys, "frozen", False):
+        exe = Path(sys.executable).resolve()
+        name = exe.name.lower()
+        if name.startswith("launch-hub-") and name.endswith(".exe"):
+            return exe.parent.resolve() == Path(path).resolve()
+    return False
 
 
 def _assert_allowed_url(url: str) -> None:
@@ -257,6 +269,31 @@ def normalize_version(raw: str | None) -> str:
     if s and s[0].isdigit():
         return f"v{s}"
     return s
+
+
+def _version_tuple(raw: str | None) -> tuple[int, ...]:
+    s = normalize_version(raw)
+    if s.lower().startswith("v"):
+        s = s[1:]
+    parts: list[int] = []
+    for piece in s.replace("-", ".").split("."):
+        if not piece:
+            continue
+        digits = ""
+        for ch in piece:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts) if parts else (0,)
+
+
+def is_remote_newer(remote: str | None, local: str | None) -> bool:
+    """True only when remote semver is strictly greater than local."""
+    return _version_tuple(remote) > _version_tuple(local)
 
 
 def format_version_bracket(version: str | None) -> str:
@@ -401,7 +438,9 @@ def check_hub_update(
     auto_update = read_auto_update_setting(*roots, default_install_dir())
     from_sot = running_from_source_tree(app_dir)
     if getattr(sys, "frozen", False):
-        from_sot = from_sot or running_from_source_tree(Path(sys.executable).parent)
+        exe_parent = Path(sys.executable).resolve().parent
+        from_sot = from_sot or running_from_source_tree(exe_parent)
+        from_sot = from_sot or running_from_dev_central_tree(exe_parent)
 
     try:
         release = json.loads(_api_request(api_latest_url(repo), tok).decode("utf-8"))
@@ -445,7 +484,7 @@ def check_hub_update(
 
     assets = {str(a.get("name") or ""): a for a in (release.get("assets") or [])}
     has_asset = asset_name in assets
-    update_available = bool(remote) and (local or "") != remote and has_asset
+    update_available = bool(remote) and is_remote_newer(remote, local) and has_asset
     can_self = bool(update_available and has_asset and not from_sot)
 
     return {
@@ -765,9 +804,12 @@ def apply_hub_update(
     for marker in ("\\dev central tree\\", "\\01_hubs\\", "\\atelierwindows\\"):
         if marker in f"\\{lowered}\\":
             return {
-                "ok": False,
-                "error": (
-                    "Mise à jour refusée : le hub tourne depuis le dépôt source. "
+                "ok": True,
+                "skipped": True,
+                "updated": False,
+                "reason": "fromSourceTree",
+                "message": (
+                    "Mise à jour ignorée : hub lancé depuis le dépôt source. "
                     f"Installe via Install-Easy sous %LOCALAPPDATA%\\{HUB_INSTALL_DIR}."
                 ),
             }

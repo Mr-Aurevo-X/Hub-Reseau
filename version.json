@@ -1,9 +1,9 @@
 {
-  "suiteVersion": "v1.4.6",
-  "tag": "v1.4.6",
+  "suiteVersion": "v1.4.7",
+  "tag": "v1.4.7",
   "hub": "reseau",
   "repo": "Mr-Aurevo-X/PCCommand-Releases",
   "packs": {
-    "hub-reseau": "v1.4.6"
+    "hub-reseau": "v1.4.7"
   }
 }

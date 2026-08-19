@@ -5,7 +5,7 @@
 const HUB_LABEL = "Network";
 const HUB_BLURB = "PC Command — live metrics (read-only) · no mutators";
 const SHOW_VIEW =
-  () => window.HubShell?.showView || window.HubSysteme?.showView;
+  () => window.HubReseau?.showView || window.HubShell?.showView;
 
 const FALLBACK_MODULES = [
   { id: "netadmin", label: "NetAdmin", desc: "Adaptateurs réseau · fichier hosts · règles pare-feu", ico: "⌬" },

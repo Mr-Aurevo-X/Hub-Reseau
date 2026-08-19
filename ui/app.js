@@ -206,6 +206,7 @@ async function loadVersionAndUpdates() {
   try {
     if (typeof a.check_for_update === "function") {
       const u = await a.check_for_update();
+      if (u?.fromSourceTree) return;
       if (u?.needsAuth) {
         showUpdateBanner(
           {
@@ -281,13 +282,46 @@ function wireSidebar() {
   });
 }
 
+async function waitPywebviewReady(timeoutMs = 8000) {
+  if (window.pywebview && window.pywebview.api) return;
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    window.addEventListener(
+      "pywebviewready",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true }
+    );
+  });
+}
+
+function showBootError(err) {
+  const root = document.getElementById("hubView");
+  if (!root) return;
+  const msg = String((err && err.message) || err || "Erreur inconnue")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;");
+  root.innerHTML =
+    '<div class="hub-boot-error" role="alert" style="padding:1.5rem;color:#f5f5f5">' +
+    "<strong>Erreur au démarrage</strong>" +
+    `<p style="margin-top:0.5rem;opacity:0.85">${msg}</p></div>`;
+}
+
 async function boot() {
-  wireSidebar();
-  await waitApi();
-  await showView("dashboard");
-  const bootView = (location.hash || "").replace(/^#/, "").trim();
-  if (bootView && bootView !== "dashboard") await showView(bootView);
-  void loadVersionAndUpdates();
+  try {
+    wireSidebar();
+    await waitPywebviewReady();
+    await waitApi();
+    await showView("dashboard");
+    const bootView = (location.hash || "").replace(/^#/, "").trim();
+    if (bootView && bootView !== "dashboard") await showView(bootView);
+    void loadVersionAndUpdates();
+  } catch (err) {
+    console.error("[Hub boot]", err);
+    showBootError(err);
+  }
 }
 
 if (document.readyState === "loading") {
