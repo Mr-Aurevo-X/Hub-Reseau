@@ -47,6 +47,11 @@ _ALLOWED_DOWNLOAD_HOSTS = _ALLOWED_API_HOSTS | {
 }
 CATALOG_ASSET = "catalog.json"
 
+HUB_INSTALL_DIR = "PCCommand"
+OPTI_INSTALL_DIR = "OptiBy-Mr-Aurevo-X"
+CHANGELOG_INSTALL_DIR = "ChangeLog-Central"
+_LEGACY_HUB_INSTALL_DIRS = ("MrAurevoX",)
+
 # Hub id → Launch-Hub-*.zip on the releases channel
 HUB_ASSETS: dict[str, str] = {
     "systeme": "Launch-Hub-Systeme.zip",
@@ -135,9 +140,19 @@ def find_token(*search_roots: Path) -> str | None:
     return None
 
 
+def localappdata_root() -> Path:
+    return Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local"))
+
+
+def hub_install_dir_candidates() -> list[Path]:
+    """Prefer PCCommand; keep legacy MrAurevoX for existing installs."""
+    root = localappdata_root()
+    names = [HUB_INSTALL_DIR, *_LEGACY_HUB_INSTALL_DIRS]
+    return [root / name for name in names]
+
+
 def default_install_dir() -> Path:
-    local = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(local) / "MrAurevoX"
+    return hub_install_dir_candidates()[0]
 
 
 def read_auto_update_setting(*search_roots: Path) -> bool:
@@ -321,11 +336,11 @@ def resolve_hub_install_dir(app_dir: Path) -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     ad = Path(app_dir).resolve()
-    # Dev: prefer LOCALAPPDATA if a hub exe already lives there
-    install = default_install_dir()
-    for name in HUB_EXES.values():
-        if (install / name).is_file():
-            return install
+    # Dev: prefer LOCALAPPDATA if a hub exe already lives there (new + legacy dirs)
+    for install in hub_install_dir_candidates():
+        for name in HUB_EXES.values():
+            if (install / name).is_file():
+                return install
     return ad
 
 
@@ -753,7 +768,7 @@ def apply_hub_update(
                 "ok": False,
                 "error": (
                     "Mise à jour refusée : le hub tourne depuis le dépôt source. "
-                    "Installe via Install-Easy sous %LOCALAPPDATA%\\MrAurevoX*."
+                    f"Installe via Install-Easy sous %LOCALAPPDATA%\\{HUB_INSTALL_DIR}."
                 ),
             }
 

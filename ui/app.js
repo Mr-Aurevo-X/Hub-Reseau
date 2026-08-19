@@ -59,6 +59,33 @@ function homeTitle() {
   return appVersion ? `${HUB_NAME} [${appVersion}]` : HUB_NAME;
 }
 
+async function setTitle(viewId, segmentLabel) {
+  currentSegment = segmentLabel || "";
+  let title;
+  if (viewId === "dashboard" || !viewId) {
+    title = homeTitle();
+  } else if (segmentLabel) {
+    title = `${HUB_NAME} [${segmentLabel}]`;
+  } else {
+    title = TITLES[viewId] || homeTitle();
+  }
+  await applyTitle(title);
+}
+
+function setActiveNav(viewId) {
+  document.querySelectorAll(".hub-nav-item").forEach((btn) => {
+    const on = btn.dataset.view === viewId;
+    btn.classList.toggle("is-active", on);
+    btn.setAttribute("aria-current", on ? "page" : "false");
+  });
+}
+
+function replayEnter(el) {
+  el.classList.remove("is-enter");
+  void el.offsetWidth;
+  el.classList.add("is-enter");
+}
+
 function dismissUpdateBanner() {
   const el = document.getElementById("hubUpdateBanner");
   if (el) el.remove();
@@ -196,7 +223,7 @@ async function loadVersionAndUpdates() {
           u.autoUpdate !== false &&
           typeof a.apply_update === "function"
         );
-        if (silent) await runHubApply(false);
+        if (silent) void runHubApply(false);
         else showUpdateBanner(u, { silent: false });
       }
     }
@@ -257,10 +284,10 @@ function wireSidebar() {
 async function boot() {
   wireSidebar();
   await waitApi();
-  await loadVersionAndUpdates();
   await showView("dashboard");
   const bootView = (location.hash || "").replace(/^#/, "").trim();
   if (bootView && bootView !== "dashboard") await showView(bootView);
+  void loadVersionAndUpdates();
 }
 
 if (document.readyState === "loading") {
