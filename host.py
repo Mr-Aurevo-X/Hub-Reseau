@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
 import ctypes
+import os
 import sys
 from pathlib import Path
 
@@ -89,19 +91,31 @@ def _start_hub_metrics(api: Api) -> None:
         api._metrics_port = int(port)
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--view", default="", help="Boot module view id (hash deep-link)")
+    return parser.parse_args()
+
+
 def main() -> None:
-    if not is_admin():
+    args = _parse_args()
+    capture_mode = os.environ.get("HUB_CAPTURE", "").strip() == "1"
+    if not capture_mode and not is_admin():
         if _relaunch_as_admin():
             raise SystemExit(0)
         raise SystemExit(f"{HUB_TITLE} nécessite les droits administrateur.")
     index = ui_dir() / "index.html"
     if not index.is_file():
         raise SystemExit(f"UI introuvable: {index}")
+    url = index.as_uri()
+    view = (args.view or "").strip().lstrip("#")
+    if view:
+        url = f"{url}#{view}"
     api = Api()
     _start_hub_metrics(api)
     create_tool_window(
         title=HUB_TITLE,
-        url=index.as_uri(),
+        url=url,
         js_api=api,
         width=DEFAULT_WIDTH,
         height=DEFAULT_HEIGHT,
