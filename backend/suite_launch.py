@@ -104,18 +104,16 @@ def _safe_app_name(name: str) -> str | None:
 
 
 def _app_folder(root: Path, app_name: str) -> Path | None:
-    """Resolve app folder under a candidate root (flat or Hub-*/_source_apps)."""
+    """Resolve app folder under a candidate root (flat layout only).
+
+    Hub mini-apps ship in-hub; standalone fallbacks are Opti, GameChangelog, etc.
+    outside ``01_Hubs/Hub-*`` — not ``_source_apps/`` reference clones.
+    """
     try:
         root_r = root.resolve()
     except OSError:
         return None
-    candidates: list[Path] = [root_r / app_name, root_r / "_source_apps" / app_name]
-    try:
-        for hub in sorted(root_r.glob("Hub-*")):
-            if hub.is_dir():
-                candidates.append(hub / "_source_apps" / app_name)
-    except OSError:
-        pass
+    candidates: list[Path] = [root_r / app_name]
     for folder in candidates:
         try:
             folder_r = folder.resolve()
