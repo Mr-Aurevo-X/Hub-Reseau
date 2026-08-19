@@ -1,6 +1,6 @@
 """Hub / suite update check + in-place Launch-Hub zip download/replace.
 
-Allowlist matches Install-Easy release_client (MrAurevoX-Launcher only).
+Allowlist matches Install-Easy release_client (PCCommand-Releases + legacy MrAurevoX-Launcher).
 """
 from __future__ import annotations
 
@@ -28,8 +28,13 @@ except ImportError:  # pragma: no cover — hubs are Windows-only
 _CHUNK = 1024 * 1024
 _LOCK_TIMEOUT_S = 5.0
 
-RELEASE_REPO_DEFAULT = "Mr-Aurevo-X/MrAurevoX-Launcher"
-_ALLOWED_RELEASE_REPOS = frozenset({RELEASE_REPO_DEFAULT})
+RELEASE_REPO_DEFAULT = "Mr-Aurevo-X/PCCommand-Releases"
+_ALLOWED_RELEASE_REPOS = frozenset(
+    {
+        RELEASE_REPO_DEFAULT,
+        "Mr-Aurevo-X/MrAurevoX-Launcher",  # GitHub rename redirect
+    }
+)
 _ALLOWED_API_HOSTS = frozenset(
     {
         "api.github.com",

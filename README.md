@@ -31,3 +31,5 @@ ui/                     # pas de ui/embedded/
 ```
 
 Titres HWND : `L'Atelier PC Command — Réseau` / `[Module|Segment]`.
+
+`_source_apps/` = clones référence des anciennes mini-apps (non shippés). SoT runtime = `backend/tools/`.
