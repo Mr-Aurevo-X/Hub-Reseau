@@ -44,8 +44,8 @@ def set_startup(enabled: bool = True) -> dict[str, Any]:
         if getattr(sys, "frozen", False):
             args = "--minimized"
         else:
-            # python host\host.py --minimized
-            host_py = app_dir() / "host" / "host.py"
+            # python host.py --minimized (flattened hub layout)
+            host_py = app_dir() / "host.py"
             target = Path(sys.executable)
             args = f'"{host_py}" --minimized'
             work = app_dir()
