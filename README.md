@@ -23,6 +23,17 @@ Hub **Réseau** — Dashboard + modules natifs. Licence PolyForm Noncommercial 1
 | RoadWay-X | Trafic live · alertes · réputation opt-in |
 | WifiKey | Profils Wi-Fi (ConfirmGate) |
 
+## Où s’installe
+
+| Mode | Emplacement |
+|------|-------------|
+| **Release** (`Launch-Hub-Reseau.zip`) | Dossier **portable** : extrayez le zip où vous voulez, lancez `Launch-Hub-Reseau.exe` depuis ce dossier. |
+| **Métadonnées / version** | `%LOCALAPPDATA%\PCCommand\` |
+| **Préférences accent / langue** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (si présent) |
+| **Dev (sources)** | Clone du repo + `Lancer.cmd` |
+
+Téléchargement : [Releases Hub-Reseau](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases).
+
 ## Lancer
 
 ```bat

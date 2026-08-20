@@ -23,6 +23,17 @@
 | RoadWay-X | Live traffic · alerts · opt-in reputation |
 | WifiKey | Wi-Fi profiles (ConfirmGate) |
 
+## Where it installs
+
+| Mode | Location |
+|------|----------|
+| **Release** (`Launch-Hub-Reseau.zip`) | **Portable** folder: extract anywhere, run `Launch-Hub-Reseau.exe` from that folder. |
+| **Version / stamp** | `%LOCALAPPDATA%\PCCommand\` |
+| **Accent / language prefs** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (if present) |
+| **Dev (sources)** | Repo clone + `Lancer.cmd` |
+
+Download: [Hub-Reseau Releases](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases).
+
 HWND titles: `PC Command | Network`. Isolation: `ISOLATION.md`.
 
 ```bat
