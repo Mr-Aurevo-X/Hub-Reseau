@@ -171,6 +171,7 @@ export function mountModuleShell(root, opts) {
     confirmTitle.textContent = titleText;
     confirmMsg.textContent = message;
     confirmOverlay.hidden = false;
+    document.body.classList.add('pcd-confirm-open');
     return new Promise((resolve) => {
       confirmResolver = resolve;
     });
@@ -178,6 +179,7 @@ export function mountModuleShell(root, opts) {
 
   function closeConfirm(ok) {
     confirmOverlay.hidden = true;
+    document.body.classList.remove('pcd-confirm-open');
     if (confirmResolver) {
       const r = confirmResolver;
       confirmResolver = null;
