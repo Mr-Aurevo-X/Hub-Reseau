@@ -581,7 +581,10 @@ class Api(WindowChromeMixin):
 
 
     def set_metrics_endpoint(self, host: str = "127.0.0.1", port: int = 0) -> dict:
-        self._metrics_host = host or "127.0.0.1"
+        h = (host or "127.0.0.1").strip().lower()
+        if h not in ("127.0.0.1", "localhost", "::1"):
+            return {"ok": False, "error": "metrics host must be loopback"}
+        self._metrics_host = "127.0.0.1" if h in ("127.0.0.1", "localhost") else "::1"
         self._metrics_port = int(port or 0)
         return {"ok": True, "host": self._metrics_host, "port": self._metrics_port}
 
