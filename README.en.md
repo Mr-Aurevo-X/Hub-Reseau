@@ -2,8 +2,8 @@
 
 # PC Command | Network
 
-**Network** hub — adapters, map, live traffic, Wi‑Fi. Home ↓↑ · TCP/NIC, native modules.  
-**Free for life** · **as local as possible** · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
+**Network** hub — adapters, map, live traffic, Wi‑Fi. Home shows throughput / connections.  
+**Free for life** · **as local as possible** · **Mr-Aurevo-X**
 
 ## Preview
 
@@ -16,52 +16,47 @@
 | Module | Role |
 |--------|------|
 | NetAdmin | Adapters, hosts, firewall, DNS |
-| NetMap | Connections · ping · proxy · shares · SiteCheck |
-| **Traffic** | Live traffic · alerts · opt-in reputation |
-| WifiKey | WLAN profiles (confirmation before action) |
+| NetMap | Connections · ping · proxy · shares · site check |
+| **Traffic** | Live traffic · alerts · reputation (if you enable it) |
+| WifiKey | Wi‑Fi profiles — confirmation before action |
 
 ## Why this hub
 
-- **Free for life** — no subscription, no account
-- **As local as possible** — no phoning home ; **unused module = no related egress**
-- Network only when **you** act: hosts / URLs / targets **you enter** · Traffic reputation **only if you enable it** · GitHub check **opt-out** in About
-- Confirmation before mutators (DNS, kill, Wi‑Fi…)
-- FR | EN · read-only network Home
+- Free for life — no subscription, no account
+- As local as possible — **no hidden server calls**
+- **Unused module = no related network egress**
+- Network only when you act: targets / URLs **you** enter · Traffic reputation **only if enabled** · GitHub update check **opt-out** in About
+- Confirmation before actions that change the network (DNS, kill, Wi‑Fi…)
+- UI FR | EN
+- Read-only Home
 
 ## On your PC
 
 | What | Where |
 |------|-------|
-| **App** (`Launch-Hub-Reseau.zip`) | Portable folder — extract, run `Launch-Hub-Reseau.exe` |
-| Metadata / version | `%LOCALAPPDATA%\PCCommand\` |
-| Prefs (language, updates…) | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared across apps) |
+| **App** | Extract `Launch-Hub-Reseau.zip`, run `Launch-Hub-Reseau.exe` |
+| Metadata | `%LOCALAPPDATA%\PCCommand\` |
+| Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
 | Traffic data | `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\` |
 
-Download: [Hub-Reseau Releases](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · tag **v2.0.0**
+[Download the release](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · **v2.0.0**
 
 ## Launch
 
-1. Download the zip from the official **Release**  
+1. Download the zip from the Releases page above  
 2. Extract anywhere  
-3. Run `Launch-Hub-Reseau.exe` (UAC admin)
+3. Run `Launch-Hub-Reseau.exe` (Windows will ask for admin)
 
-Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed. That is **SmartScreen** (reputation), not an antivirus verdict.
+Windows may show a warning: binaries are **not signed**. That is **SmartScreen**, not an antivirus “virus” verdict.
 
-## Disclaimer — official builds only
+## Official version only
 
-The **only** sources and binaries I stand behind are those published at:
+The only build I stand behind:
 
-**https://github.com/Mr-Aurevo-X/Hub-Reseau** (this repository’s Releases / tags).
+**https://github.com/Mr-Aurevo-X/Hub-Reseau**
 
-Any **fork**, copy, rebuild, or third-party modified redistribution is **not** an official Mr-Aurevo-X build, is **not** reviewed, and may include changes (including URLs or network behavior) **outside my control**.
-
-I accept **no liability** for damage, data loss, or incidents arising from unofficial builds, misuse, or a compromised machine.
-
-Software provided **as is**, without warranty — see `LICENSE` (PolyForm Noncommercial 1.0.0). Use at your own risk.
-
-## Legal
-
-`PRIVACY.md` · `LICENSE`
+A fork or modified copy elsewhere is **not** my version — I am not responsible for it.  
+Software **as is**, without warranty — see `LICENSE` and `PRIVACY.md`.
 
 ## Support (optional)
 
