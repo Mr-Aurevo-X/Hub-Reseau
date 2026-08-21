@@ -211,7 +211,7 @@ class ReputationService:
                 "https://urlhaus-api.abuse.ch/v1/host/",
                 data=data,
                 method="POST",
-                headers={"User-Agent": "RoadWay-X/1.0 (local opt-in)"},
+                headers={"User-Agent": "Traffic/1.0 (local opt-in)"},
             )
             with urllib.request.urlopen(req, timeout=8) as resp:
                 body = json.loads(resp.read().decode("utf-8", errors="replace"))
@@ -241,7 +241,7 @@ class ReputationService:
                 headers={
                     "Key": self._abuse_key,
                     "Accept": "application/json",
-                    "User-Agent": "RoadWay-X/1.0 (local opt-in)",
+                    "User-Agent": "Traffic/1.0 (local opt-in)",
                 },
             )
             with urllib.request.urlopen(req, timeout=8) as resp:

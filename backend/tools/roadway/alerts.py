@@ -147,7 +147,7 @@ class AlertStore:
         }
 
     def _toast(self, item: dict[str, Any]) -> None:
-        title = "RoadWay-X"
+        title = "Traffic"
         sev = str(item.get("severity") or "info").upper()
         detail = str(item.get("detail") or item.get("label_fr") or "Alerte")
         # Escape for PowerShell single-quoted string

@@ -21,7 +21,7 @@ The Suite as a whole is **not** advertised as “100% local”: some modules can
 |-----------|-----|-----------|
 | Hub release notice | Compare local version to GitHub Latest (no download) | `api.github.com` |
 | Trad-X | Translation you request | Google Translate via `deep_translator` — **text leaves this PC** |
-| RoadWay-X reputation | Opt-in lookup | URLhaus / AbuseIPDB (plus browser links to VirusTotal / Talos) |
+| Traffic reputation | Opt-in lookup | URLhaus / AbuseIPDB (plus browser links to VirusTotal / Talos) |
 | NetAdmin / NetMap tests | Diagnostics you start | Hosts **you** type |
 | Local metrics dashboard | Live KPIs on Accueil | `127.0.0.1` only |
 | Discord / PayPal / Revolut buttons | Optional contact or donation | Those operators’ sites and privacy policies |

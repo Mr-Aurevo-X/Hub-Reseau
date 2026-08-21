@@ -7,6 +7,7 @@
  * Shared UninstX-grade in-hub helpers — native DOM only (no iframe).
  */
 import { apiNs, esc } from "../_hub_util.js";
+import { t } from "../i18n.js";
 
 export { apiNs, esc };
 
@@ -88,11 +89,11 @@ export function mountModuleShell(root, opts) {
       <p class="status" data-role="status"></p>
       <div class="confirm-overlay" data-role="confirm" hidden>
         <div class="confirm-box" role="dialog" aria-modal="true">
-          <h3 data-role="confirm-title">Confirmer</h3>
+          <h3 data-role="confirm-title">${esc(t("confirmTitle"))}</h3>
           <p data-role="confirm-msg"></p>
           <div class="btn-row">
-            <button type="button" class="btn" data-role="confirm-cancel">Annuler</button>
-            <button type="button" class="btn danger" data-role="confirm-ok">Confirmer</button>
+            <button type="button" class="btn" data-role="confirm-cancel">${esc(t("confirmCancel"))}</button>
+            <button type="button" class="btn danger" data-role="confirm-ok">${esc(t("confirmOk"))}</button>
           </div>
         </div>
       </div>
@@ -171,9 +172,11 @@ export function mountModuleShell(root, opts) {
     });
   }
 
-  function askConfirm(message, titleText = "Confirmer") {
-    confirmTitle.textContent = titleText;
+  function askConfirm(message, titleText) {
+    confirmTitle.textContent = titleText || t("confirmTitle");
     confirmMsg.textContent = message;
+    confirmOk.textContent = t("confirmOk");
+    confirmCancel.textContent = t("confirmCancel");
     confirmOverlay.hidden = false;
     document.body.classList.add('pcd-confirm-open');
     return new Promise((resolve) => {

@@ -27,6 +27,7 @@ from typing import Any
 import psutil
 
 from tools.netadmin import adapter_reset as mod_adapter
+from tools.netadmin import dns_presets as mod_dns
 from tools.netadmin import firewall_rules as mod_firewall
 from tools.netadmin import hosts_editor as mod_hosts
 from tools.netmap import pingtrace as mod_ping
@@ -41,7 +42,15 @@ from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_l
 class NetAdminApi:
     """NetAdmin in-process — ConfirmGate on mutators."""
 
-    ACTIONS = ("write_hosts", "set_rule_enabled", "reset_ip", "reset_winsock", "flush_dns")
+    ACTIONS = (
+        "write_hosts",
+        "set_rule_enabled",
+        "reset_ip",
+        "reset_winsock",
+        "flush_dns",
+        "set_dns_preset",
+        "set_dns_custom",
+    )
 
     def __init__(self, gate: ConfirmGate) -> None:
         self._confirm = gate
@@ -93,6 +102,34 @@ class NetAdminApi:
     def flush_dns(self, token: str | None = None) -> dict:
         denied = self._consume("flush_dns", {}, token)
         return denied if denied is not None else mod_hosts.flush_dns()
+
+    def list_dns_presets(self) -> dict:
+        return mod_dns.list_presets()
+
+    def get_current_dns(self) -> dict:
+        return mod_dns.get_current_dns()
+
+    def set_dns_preset(self, preset_id: str, token: str | None = None) -> dict:
+        payload = {"preset_id": str(preset_id or "")}
+        denied = self._consume("set_dns_preset", payload, token)
+        return denied if denied is not None else mod_dns.apply_preset(str(preset_id or ""))
+
+    def set_dns_custom(
+        self,
+        primary: str,
+        secondary: str | None = None,
+        token: str | None = None,
+    ) -> dict:
+        payload = {
+            "primary": str(primary or "").strip(),
+            "secondary": str(secondary or "").strip(),
+        }
+        denied = self._consume("set_dns_custom", payload, token)
+        return (
+            denied
+            if denied is not None
+            else mod_dns.apply_custom(payload["primary"], payload["secondary"] or None)
+        )
 
     def resolve_host(self, hostname: str) -> dict:
         return mod_hosts.resolve_host(hostname)
@@ -536,7 +573,7 @@ class Api(WindowChromeMixin):
 
     def set_window(self, window: Any) -> None:
         WindowChromeMixin.set_window(self, window)
-        # RoadWay / NetMap export dialogs need the HWND
+        # Traffic / NetMap export dialogs need the HWND
         try:
             self.roadway._window = window  # noqa: SLF001
         except Exception:  # noqa: BLE001
@@ -560,7 +597,7 @@ class Api(WindowChromeMixin):
             },
             {
                 "id": "roadway",
-                "label": "RoadWay-X",
+                "label": "Traffic",
                 "desc": "Trafic live · alertes · règles",
             },
             {
@@ -582,6 +619,17 @@ class Api(WindowChromeMixin):
 
     def get_suite_language(self) -> dict:
         return {"ok": True, "language": resolve_suite_language()}
+
+    def set_suite_language(self, language: str = "fr") -> dict:
+        lang = str(language or "").strip().lower()
+        if lang not in ("fr", "en"):
+            return {"ok": False, "error": "language must be fr or en"}
+        hub_update.write_user_settings_merge({"language": lang})
+        return {
+            "ok": True,
+            "language": lang,
+            "path": str(hub_update.user_settings_path()),
+        }
 
     def is_admin(self) -> dict:
         return {"ok": True, "admin": is_admin()}
@@ -619,11 +667,26 @@ class Api(WindowChromeMixin):
     def check_latest_release(self) -> dict:
         return hub_update.check_hub_release(HUB_ID, _HUB_ROOT)
 
+    def get_update_check_pref(self) -> dict:
+        enabled = hub_update.is_github_update_check_enabled()
+        return {
+            "ok": True,
+            "checkGithubUpdates": enabled,
+            "path": str(hub_update.user_settings_path()),
+        }
+
+    def set_update_check_pref(self, enabled: bool = True) -> dict:
+        return hub_update.set_github_update_check(bool(enabled))
+
+    def get_about_local_paths(self) -> dict:
+        return hub_update.about_local_paths(_HUB_ROOT, hub_id=HUB_ID)
+
     def open_release_page(self, url: str = "") -> dict:
         target = (url or "").strip()
         if not target:
-            info = hub_update.check_hub_release(HUB_ID, _HUB_ROOT)
-            target = str(info.get("releaseUrl") or "")
+            repo = hub_update.HUB_GITHUB_REPOS.get(hub_update.normalize_hub_id(HUB_ID), "")
+            if repo:
+                target = f"https://github.com/{repo}/releases/latest"
         return hub_update.open_release_url(target)
 
     def open_suite_app(self, name: str) -> dict:

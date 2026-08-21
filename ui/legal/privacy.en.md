@@ -15,7 +15,7 @@ The Suite is not “100% local” as a whole: some modules use the network when 
 3. Network exceptions (not publisher telemetry)
 - Hub release notice: compare local version to GitHub Latest (no download).
 - Trad-X: Google Translate via deep_translator — text leaves this PC.
-- RoadWay-X reputation (opt-in): URLhaus / AbuseIPDB (+ VirusTotal / Talos links).
+- Traffic reputation (opt-in): URLhaus / AbuseIPDB (+ VirusTotal / Talos links).
 - NetAdmin / NetMap tests: hosts you type.
 - Accueil metrics: 127.0.0.1 only.
 - Discord / PayPal / Revolut buttons: those operators’ sites.

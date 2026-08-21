@@ -227,15 +227,24 @@ class TrafficCollector:
                 pass
 
         try:
-            from modules import net_rates as mod_rates
+            from tools.roadway import net_rates as mod_rates
 
             # Prefer scoped rates via local method (faster than all-process iter)
             proc_rates = self._process_net_rates(now, pids_seen)
             nic["rate_source"] = mod_rates.rate_source()
-            nic["rate_meta"] = mod_rates.meta()
+            nic["rate_meta"] = {
+                **mod_rates.meta(),
+                "total_bps_up": float(nic.get("bps_up") or 0),
+                "total_bps_down": float(nic.get("bps_down") or 0),
+            }
         except Exception:
             proc_rates = self._process_net_rates(now, pids_seen)
             nic["rate_source"] = "approx"
+            nic["rate_meta"] = {
+                "rate_source": "approx",
+                "total_bps_up": float(nic.get("bps_up") or 0),
+                "total_bps_down": float(nic.get("bps_down") or 0),
+            }
 
         geo_budget = 25
         geo_done: set[str] = set()
@@ -272,7 +281,7 @@ class TrafficCollector:
                 if row["outbound"] and rip and rip not in geo_done and len(geo_done) < geo_budget:
                     geo_done.add(str(rip))
                     try:
-                        from modules import geoip as mod_geo
+                        from tools.roadway import geoip as mod_geo
 
                         g = mod_geo.lookup(str(rip))
                         row["country"] = g.get("country")

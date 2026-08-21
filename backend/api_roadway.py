@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
 
-"""RoadWay-X — host WebView2 (trafic + quiz + actions manuelles)."""
+"""Traffic — host WebView2 (trafic + quiz + actions manuelles)."""
 from __future__ import annotations
 
 import csv
@@ -312,7 +312,12 @@ class RoadwayApi:
         payload["new_questions"] = queued
         payload["questions"] = self._trust.list_questions().get("questions") or []
         payload["trust_status"] = self._trust.status()
-        payload["rate_meta"] = mod_rates.meta()
+        nic = payload.get("nic") if isinstance(payload.get("nic"), dict) else {}
+        payload["rate_meta"] = {
+            **mod_rates.meta(),
+            "total_bps_up": float(nic.get("bps_up") or 0),
+            "total_bps_down": float(nic.get("bps_down") or 0),
+        }
         payload["dns_recent"] = mod_dns.list_recent(40).get("items") or []
         # Async reputation enrich for new host questions when enabled
         if self._reputation.get_settings().get("enabled") and queued:
@@ -328,7 +333,7 @@ class RoadwayApi:
         if accepted and self._tray:
             high = [a for a in accepted if a.get("severity") == "high"]
             if high:
-                self._tray.notify("RoadWay-X", high[0].get("detail") or "Alerte")
+                self._tray.notify("Traffic", high[0].get("detail") or "Alerte")
         return payload
 
     def _enrich_question(self, qid: str, target: str) -> None:
@@ -487,10 +492,10 @@ class RoadwayApi:
                     ]
                 )
             content = buf.getvalue()
-            filename = "roadway-flows.csv"
+            filename = "traffic-flows.csv"
         else:
             content = json.dumps(snap, indent=2, ensure_ascii=False, default=str)
-            filename = "roadway-snapshot.json"
+            filename = "traffic-snapshot.json"
         return self._save_dialog(content, filename)
 
     def export_alerts(self, format: str = "json") -> dict:
@@ -506,10 +511,10 @@ class RoadwayApi:
                     [a.get("ts"), a.get("severity"), a.get("rule"), a.get("detail"), a.get("pid"), a.get("name"), a.get("remote")]
                 )
             content = buf.getvalue()
-            filename = "roadway-alerts.csv"
+            filename = "traffic-alerts.csv"
         else:
             content = json.dumps(alerts, indent=2, ensure_ascii=False, default=str)
-            filename = "roadway-alerts.json"
+            filename = "traffic-alerts.json"
         return self._save_dialog(content, filename)
 
     def _save_dialog(self, content: str, filename: str) -> dict:

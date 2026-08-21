@@ -1,11 +1,7 @@
-# Release channels
+﻿# Releases — Hub-Reseau
 
-Binaries ship through **this repository's** GitHub Releases (same remote as sources).
+Tag courant : **v2.0.0**
 
-Example: `https://github.com/Mr-Aurevo-X/Hub-Reseau/releases`
+Asset : `Launch-Hub-Reseau.zip` sur le remote `Mr-Aurevo-X/Hub-Reseau`.
 
-Asset: `Launch-Hub-Reseau.zip` (one zip per hub — no monolithic Hubs.zip).
-
-## Stable
-
-Production tags on the default branch. GitHub “Latest” non-prerelease.
+No central PCCommand-Releases / Install-Easy channel.

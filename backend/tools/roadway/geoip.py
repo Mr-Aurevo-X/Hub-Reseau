@@ -16,7 +16,7 @@ _cache: dict[str, dict[str, Any]] = {}
 
 def data_dir() -> Path:
     local = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    path = Path(local) / "Mr-Aurevo-X" / "RoadWay-X"
+    path = Path(local) / "Mr-Aurevo-X" / "Traffic"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -90,5 +90,5 @@ def status() -> dict[str, Any]:
         "ok": True,
         "available": reader is not None,
         "paths": paths,
-        "hint": "Placez GeoLite2-Country.mmdb dans %LOCALAPPDATA%\\Mr-Aurevo-X\\RoadWay-X\\",
+        "hint": "Placez GeoLite2-Country.mmdb dans le dossier données Traffic (%LOCALAPPDATA%\\Mr-Aurevo-X\\RoadWay-X\\)",
     }

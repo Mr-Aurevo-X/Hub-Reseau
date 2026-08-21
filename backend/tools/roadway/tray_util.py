@@ -60,7 +60,7 @@ $s = $ws.CreateShortcut('{str(lnk).replace("'", "''")}')
 $s.TargetPath = '{str(target).replace("'", "''")}'
 $s.Arguments = '{args.replace("'", "''")}'
 $s.WorkingDirectory = '{str(work).replace("'", "''")}'
-$s.Description = 'RoadWay-X'
+$s.Description = 'Traffic'
 $s.Save()
 """
         import subprocess
@@ -126,7 +126,7 @@ class TrayController:
             pystray.MenuItem("Pause / Reprendre monitoring", on_toggle),
             pystray.MenuItem("Quitter", on_quit),
         )
-        self._icon = pystray.Icon("RoadWay-X", make_image(), "RoadWay-X", menu)
+        self._icon = pystray.Icon("Traffic", make_image(), "Traffic", menu)
 
         def run() -> None:
             assert self._icon is not None

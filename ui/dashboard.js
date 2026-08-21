@@ -7,17 +7,20 @@
  * Hub Accueil Réseau — Filament Void Glow (dash-prop · gauge-card).
  * Hero Down/Up only · TCP/NIC KPIs · adapters — lecture seule.
  */
-const HUB_LABEL = "Network";
-const HUB_BLURB = "PC Command — lecture seule · zéro mutator";
+import { locale, t } from "./i18n.js";
+
 const SHOW_VIEW = () => window.HubReseau?.showView || window.HubShell?.showView;
 
-const FALLBACK_MODULES = [
-  { id: "netadmin", label: "NetAdmin", desc: "Adaptateurs réseau · fichier hosts · règles pare-feu", ico: "⌬" },
-  { id: "netmap", label: "NetMap", desc: "Connexions TCP/UDP · ping · proxy · partages", ico: "⌖" },
-  { id: "roadway", label: "RoadWay-X", desc: "Trafic live · alertes heuristiques · DNS · confiance", ico: "↗" },
-  { id: "wifikey", label: "WifiKey", desc: "Profils WLAN et clés de sécurité", ico: "≋" },
-];
-const ICO = Object.fromEntries(FALLBACK_MODULES.map((m) => [m.id, m.ico]));
+function moduleCatalog() {
+  return [
+    { id: "netadmin", label: "NetAdmin", desc: t("modNetAdminDesc"), ico: "⌬" },
+    { id: "netmap", label: "NetMap", desc: t("modNetMapDesc"), ico: "⌖" },
+    { id: "roadway", label: "Traffic", desc: t("modTrafficDesc"), ico: "↗" },
+    { id: "wifikey", label: "WifiKey", desc: t("modWifiKeyDesc"), ico: "≋" },
+  ];
+}
+
+const ICO = { netadmin: "⌬", netmap: "⌖", roadway: "↗", wifikey: "≋" };
 
 const HISTORY = 60;
 const ARC_LEN = 141.37;
@@ -78,43 +81,42 @@ function metricsMarkup() {
   <div class="hub-dash-root">
     <header class="hub-page-header hub-dash-head">
       <div>
-        <p class="kicker">Hub ${esc(HUB_LABEL)} · Void Glow</p>
-        <h1>Accueil</h1>
-        <p>${esc(HUB_BLURB)}</p>
+        <h1>${esc(t("dashTitle"))}</h1>
+        <p>${esc(t("dashBlurb"))}</p>
       </div>
       <div class="hub-dash-live">
         <time id="clock">—</time>
-        <span class="live-pill off" id="livePill"><i></i> OFF</span>
+        <span class="live-pill off" id="livePill"><i></i> ${esc(t("dashOff"))}</span>
       </div>
     </header>
 
     <div class="dash-prop">
-      <section class="gauges-block" aria-label="Débit Down Up">
+      <section class="gauges-block" aria-label="${esc(t("dashGaugesAria"))}">
         <div class="gauges gauges-2">
-          ${gaugeCard("down", "↓ Down")}
-          ${gaugeCard("up", "↑ Up")}
+          ${gaugeCard("down", esc(t("dashDown")))}
+          ${gaugeCard("up", esc(t("dashUp")))}
         </div>
       </section>
-      <section class="mid-row" aria-label="TCP et NIC">
+      <section class="mid-row" aria-label="${esc(t("dashTcpNicAria"))}">
         <article class="kpi">
-          <small>TCP établis</small>
+          <small>${esc(t("dashTcp"))}</small>
           <b id="tcpCount">—</b>
-          <em>connexions actives</em>
+          <em>${esc(t("dashTcpEm"))}</em>
         </article>
         <article class="kpi">
-          <small>NIC Up</small>
+          <small>${esc(t("dashNicUp"))}</small>
           <b id="nicUp">—</b>
           <em id="nicNames">—</em>
         </article>
       </section>
-      <section class="bottom-row" aria-label="Trafic et adaptateurs">
+      <section class="bottom-row" aria-label="${esc(t("dashTrafficAdaptersAria"))}">
         <article class="kpi kpi-net">
-          <small><span class="live-dot"></span>Trafic · live</small>
+          <small><span class="live-dot"></span>${esc(t("dashTrafficLive"))}</small>
           <div class="net-live">
             <div class="rate dn">↓ <b id="netDn">0</b><span>KB/s</span></div>
             <div class="rate up">↑ <b id="netUp">0</b><span>KB/s</span></div>
           </div>
-          <p class="net-peak" id="netPeak">pic 60s · ↓ — · ↑ —</p>
+          <p class="net-peak" id="netPeak">${esc(t("dashPeak", { dn: "—", up: "—" }))}</p>
           <svg class="net-spark" id="netSpark" viewBox="0 0 120 36" aria-hidden="true">
             <path class="area-dn" d=""/>
             <polyline class="ln-dn" points=""/>
@@ -124,18 +126,18 @@ function metricsMarkup() {
         </article>
         <article class="kpi kpi-disk">
           <div class="disk-head">
-            <small>Adaptateurs</small>
+            <small>${esc(t("dashAdapters"))}</small>
             <b class="count" id="adapterCount">—</b>
           </div>
           <div class="disk-stack" id="adapterStack">
-            <div class="disk-empty">Chargement…</div>
+            <div class="disk-empty">${esc(t("dashAdaptersLoading"))}</div>
           </div>
         </article>
       </section>
     </div>
 
-    <section class="hub-dash-modules" aria-label="Accès rapide">
-      <h2 class="hub-section-title sec">Modules</h2>
+    <section class="hub-dash-modules" aria-label="${esc(t("dashQuickAria"))}">
+      <h2 class="hub-section-title sec">${esc(t("dashModules"))}</h2>
       <div class="mods" id="tileGrid"></div>
       <p class="hub-status" id="dashStatus"></p>
     </section>
@@ -177,8 +179,8 @@ function setGauge(kind, pct, name, sub, tempC, valText) {
     if (tempC != null && Number.isFinite(tempC)) {
       temp.hidden = false;
       temp.style.setProperty("--tc", tone.color);
-      const t = temp.querySelector(".t-txt");
-      if (t) t.textContent = `${Math.round(tempC)}°C`;
+      const tEl = temp.querySelector(".t-txt");
+      if (tEl) tEl.textContent = `${Math.round(tempC)}°C`;
     } else {
       temp.hidden = true;
     }
@@ -267,10 +269,10 @@ function renderAdapters(adapters, nicUp, nicNames) {
   }
   if (count) {
     const up = nicUp != null ? Number(nicUp) : rows.filter((a) => /up/i.test(String(a.status || ""))).length;
-    count.textContent = `${up} up`;
+    count.textContent = t("dashAdaptersUp", { n: up });
   }
   if (!rows.length) {
-    stack.innerHTML = `<div class="disk-empty">Aucun adaptateur</div>`;
+    stack.innerHTML = `<div class="disk-empty">${esc(t("dashAdaptersEmpty"))}</div>`;
     return;
   }
   stack.innerHTML = rows
@@ -279,10 +281,9 @@ function renderAdapters(adapters, nicUp, nicNames) {
       const name = esc(a.name || a.Name || "?");
       const st = String(a.status || a.Status || "—");
       const up = /up/i.test(st);
-      const cls = up ? "ok" : "";
-      const pct = up ? 100 : 0;
-      const short = name.length > 10 ? `${name.slice(0, 9)}…` : name;
-      return `<div class="drow ${cls}"><span class="ltr" title="${name}">${short}</span><div class="dbar" title="${esc(st)}"><i style="width:${pct}%"></i></div><span class="pct">${esc(st)}</span></div>`;
+      const cls = up ? "up" : "down";
+      const label = up ? "Up" : /down/i.test(st) ? "Down" : esc(st);
+      return `<div class="arow ${cls}"><span class="aname" title="${name}">${name}</span><span class="astat">${label}</span></div>`;
     })
     .join("");
 }
@@ -314,7 +315,7 @@ function applyMetrics(data) {
     "down",
     ratePct(downKb, peakDn),
     dn.unit,
-    `pic 60s · ${peakDnF.text} ${peakDnF.unit}`,
+    t("dashPeakGauge", { val: `${peakDnF.text} ${peakDnF.unit}` }),
     null,
     dn.text
   );
@@ -322,7 +323,7 @@ function applyMetrics(data) {
     "up",
     ratePct(upKb, peakUp),
     up.unit,
-    `pic 60s · ${peakUpF.text} ${peakUpF.unit}`,
+    t("dashPeakGauge", { val: `${peakUpF.text} ${peakUpF.unit}` }),
     null,
     up.text
   );
@@ -330,13 +331,13 @@ function applyMetrics(data) {
   if (el("netDn")) el("netDn").textContent = downKb.toFixed(0);
   if (el("netUp")) el("netUp").textContent = upKb.toFixed(0);
   if (el("netPeak")) {
-    el("netPeak").textContent = `pic 60s · ↓ ${peakDn.toFixed(0)} · ↑ ${peakUp.toFixed(0)}`;
+    el("netPeak").textContent = t("dashPeak", { dn: peakDn.toFixed(0), up: peakUp.toFixed(0) });
   }
   drawNetSpark();
 
   if (el("livePill")) {
     el("livePill").classList.remove("off");
-    el("livePill").innerHTML = "<i></i> LIVE";
+    el("livePill").innerHTML = `<i></i> ${esc(t("dashLive"))}`;
   }
 }
 
@@ -344,21 +345,21 @@ function applyKpis(k) {
   if (!k || !k.ok) return;
   if (el("tcpCount")) {
     el("tcpCount").textContent =
-      k.tcpEstablished != null ? Number(k.tcpEstablished).toLocaleString("fr-FR") : "—";
+      k.tcpEstablished != null ? Number(k.tcpEstablished).toLocaleString(locale()) : "—";
   }
   if (el("nicUp")) el("nicUp").textContent = k.nicUp != null ? String(k.nicUp) : "—";
   if (el("nicNames")) el("nicNames").textContent = k.nicNames || "—";
   renderAdapters(k.adapters, k.nicUp, k.nicNames);
   if (el("livePill") && !metricsUrl) {
     el("livePill").classList.remove("off");
-    el("livePill").innerHTML = "<i></i> LIVE";
+    el("livePill").innerHTML = `<i></i> ${esc(t("dashLive"))}`;
   }
 }
 
 function offline() {
   if (el("livePill")) {
     el("livePill").classList.add("off");
-    el("livePill").innerHTML = "<i></i> OFF";
+    el("livePill").innerHTML = `<i></i> ${esc(t("dashOff"))}`;
   }
 }
 
@@ -401,11 +402,12 @@ async function tickKpis() {
 
 function clock() {
   const c = el("clock");
-  if (c) c.textContent = new Date().toLocaleTimeString("fr-FR", { hour12: false });
+  if (c) c.textContent = new Date().toLocaleTimeString(locale(), { hour12: false });
 }
 
 async function mountTiles() {
   const a = api();
+  const fallback = moduleCatalog();
   let modules = [];
   try {
     if (a?.dashboard?.list_modules) {
@@ -413,13 +415,17 @@ async function mountTiles() {
       modules = (res && res.modules) || [];
     }
   } catch (_) {}
-  if (!modules.length) modules = FALLBACK_MODULES;
+  if (!modules.length) modules = fallback;
   else {
-    modules = modules.map((m) => ({
-      ...m,
-      ico: ICO[m.id] || m.ico || "▪",
-      desc: m.desc || FALLBACK_MODULES.find((f) => f.id === m.id)?.desc || "",
-    }));
+    modules = modules.map((m) => {
+      const fb = fallback.find((f) => f.id === m.id);
+      return {
+        ...m,
+        ico: ICO[m.id] || m.ico || "▪",
+        label: fb?.label || m.label,
+        desc: fb?.desc || m.desc || "",
+      };
+    });
   }
   const tiles = el("tileGrid");
   if (!tiles) return;
@@ -430,7 +436,7 @@ async function mountTiles() {
         <span class="tile-k">${esc(m.ico || "▪")}</span>
         <strong>${esc(m.label)}</strong>
         <span class="tile-b">${esc(m.desc || "")}</span>
-        <span class="go">Ouvrir →</span>
+        <span class="go">${esc(t("dashOpen"))}</span>
         <span class="fil"></span>
       </button>`
     )
@@ -469,7 +475,7 @@ export async function mount(root) {
   unmount();
   root.innerHTML = metricsMarkup();
   const status = el("dashStatus");
-  if (status) status.textContent = "Lecture locale réseau · zéro mutator · aucune donnée envoyée hors machine.";
+  if (status) status.textContent = t("dashStatus");
   await mountTiles();
   clock();
   clockTimer = setInterval(clock, 1000);

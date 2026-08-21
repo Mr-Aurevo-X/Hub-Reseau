@@ -15,7 +15,7 @@ La Suite n’est pas « 100 % locale » dans son ensemble : certains modules uti
 3. Exceptions réseau (pas de télémétrie éditeur)
 - Notification de release hub : comparaison de version locale vs GitHub Latest (pas de téléchargement).
 - Trad-X : Google Translate via deep_translator — le texte quitte le PC.
-- RoadWay-X réputation (opt-in) : URLhaus / AbuseIPDB (+ liens VirusTotal / Talos).
+- Traffic réputation (opt-in) : URLhaus / AbuseIPDB (+ liens VirusTotal / Talos).
 - Tests NetAdmin / NetMap : hôtes que vous saisissez.
 - Métriques Accueil : 127.0.0.1 uniquement.
 - Boutons Discord / PayPal / Revolut : sites de ces opérateurs.

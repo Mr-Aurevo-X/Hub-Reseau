@@ -1,38 +1,43 @@
 ﻿[Français](README.md) · [English](README.en.md)
 
-# Hub-Reseau — PC Command
+# PC Command | Network
 
-Distribution **lecture seule**. Pas de pull requests ni d’issues (`CONTRIBUTING.md`).
-
-Hub **Réseau** — Dashboard + modules natifs. Licence PolyForm Noncommercial 1.0.0. Éditeur : **Mr-Aurevo-X**.
-
-**Local-first.** Exceptions réseau honnêtes : tests vers les hôtes que vous saisissez ; réputation RoadWay-X en opt-in (URLhaus / AbuseIPDB). Voir `PRIVACY.md`.
+Hub **Réseau** — adaptateurs, carte, trafic live, Wi‑Fi. Accueil ↓↑ · TCP/NIC, modules natifs.  
+**Void Glow** · **local-first** (hôtes que tu saisis · réputation Traffic opt-in · vérif. GitHub optionnelle) · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
 
 ## Aperçu
 
-| Accueil | Module |
-|---------|--------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![NetMap](docs/screenshots/netmap.png) |
+| Accueil | Traffic |
+|---------|---------|
+| ![Accueil](docs/screenshots/dashboard.png) | ![Traffic](docs/screenshots/traffic.png) |
 
 ## Modules
 
 | Module | Rôle |
 |--------|------|
-| NetAdmin | Adaptateurs, hosts, firewall |
+| NetAdmin | Adaptateurs, hosts, firewall, DNS |
 | NetMap | Connexions · ping · proxy · partages |
-| RoadWay-X | Trafic live · alertes · réputation opt-in |
-| WifiKey | Profils Wi-Fi (ConfirmGate) |
+| **Traffic** | Trafic live · alertes · réputation opt-in |
+| WifiKey | Profils WLAN (ConfirmGate) |
 
-## Où s’installe
+## Pourquoi ce hub
+
+- Accueil réseau **lecture seule** — débit, TCP, adaptateurs
+- ConfirmGate sur mutators (DNS, kill, Wi‑Fi…)
+- FR | EN · dons · À propos (CGU / Confidentialité / Mentions / Notices)
+- Données Traffic : `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\`
+
+## Où ça vit sur le PC
 
 | Mode | Emplacement |
 |------|-------------|
-| **Release** (`Launch-Hub-Reseau.zip`) | Dossier **portable** : extrayez le zip où vous voulez, lancez `Launch-Hub-Reseau.exe` depuis ce dossier. |
-| **Métadonnées / version** | `%LOCALAPPDATA%\PCCommand\` |
-| **Préférences accent / langue** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (si présent) |
-| **Dev (sources)** | Clone du repo + `Lancer.cmd` |
+| **Release** (`Launch-Hub-Reseau.zip`) | Dossier **portable** — `Launch-Hub-Reseau.exe` |
+| Métadonnées / version | `%LOCALAPPDATA%\PCCommand\` |
+| Préférences | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
+| Données Traffic | `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\` |
+| Dev | Clone + `Lancer.cmd` |
 
-Téléchargement : [Releases Hub-Reseau](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases).
+Téléchargement : [Releases Hub-Reseau](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · tag **v2.0.0**
 
 ## Lancer
 
@@ -40,9 +45,7 @@ Téléchargement : [Releases Hub-Reseau](https://github.com/Mr-Aurevo-X/Hub-Rese
 Lancer.cmd
 ```
 
-Windows peut afficher « potentiellement dangereux » : les binaires ne sont pas signés Authenticode (pas de certificat éditeur payant). C’est un avertissement de réputation SmartScreen, pas un verdict antivirus.
-
-Titres HWND : `PC Command | Network` / `[Module]`. Isolation : `ISOLATION.md`.
+SmartScreen possible (binaires non signés). Titre : `PC Command | Network` / `[Module]`. Voir `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
 
 ---
 

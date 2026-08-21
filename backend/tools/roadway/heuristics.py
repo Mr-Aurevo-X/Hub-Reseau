@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
 
-"""Heuristic rules engine for RoadWay-X."""
+"""Heuristic rules engine for Traffic."""
 from __future__ import annotations
 
 import json

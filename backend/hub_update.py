@@ -84,6 +84,194 @@ def localappdata_root() -> Path:
     return Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local"))
 
 
+def user_settings_path() -> Path:
+    return localappdata_root() / "Mr-Aurevo-X" / "user-settings.json"
+
+
+def read_user_settings() -> dict[str, Any]:
+    path = user_settings_path()
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_user_settings_merge(patch: dict[str, Any]) -> dict[str, Any]:
+    """Merge keys into %LOCALAPPDATA%/Mr-Aurevo-X/user-settings.json (preserves accent/language)."""
+    current = read_user_settings()
+    current.update(patch or {})
+    path = user_settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return current
+
+
+def is_github_update_check_enabled() -> bool:
+    """Default True — opt-out via user-settings.checkGithubUpdates = false."""
+    val = read_user_settings().get("checkGithubUpdates")
+    if val is None:
+        return True
+    return bool(val)
+
+
+def set_github_update_check(enabled: bool) -> dict[str, Any]:
+    write_user_settings_merge({"checkGithubUpdates": bool(enabled)})
+    return {
+        "ok": True,
+        "checkGithubUpdates": bool(enabled),
+        "path": str(user_settings_path()),
+    }
+
+
+def _user_desktop_dirs() -> list[Path]:
+    """Possible Desktop folders (FR Bureau / EN Desktop / OneDrive)."""
+    home = Path.home()
+    out: list[Path] = []
+    for rel in (
+        "Desktop",
+        "Bureau",
+        "OneDrive/Desktop",
+        "OneDrive/Bureau",
+        "OneDrive - Personal/Desktop",
+        "OneDrive - Personal/Bureau",
+    ):
+        p = home / Path(rel)
+        if p.is_dir():
+            out.append(p)
+    return out
+
+
+def _user_downloads_dir() -> Path | None:
+    home = Path.home()
+    for name in ("Downloads", "Téléchargements", "Telechargements"):
+        p = home / name
+        if p.is_dir():
+            return p
+    return None
+
+
+def resolve_hub_exe_dir(hub_id: str | None = None) -> Path | None:
+    """Folder that contains the shipped Launch-Hub-*.exe when known.
+
+    Frozen / shipped: parent of ``sys.executable`` — wherever the user put it
+    (Desktop, USB, Downloads, Programs…). That is the path shown in About.
+
+    Dev (Lancer.cmd): search common locations for the exe; never return monorepo.
+    """
+    if getattr(sys, "frozen", False):
+        try:
+            return Path(sys.executable).resolve().parent
+        except OSError:
+            return None
+
+    hub_key = normalize_hub_id(hub_id or "")
+    asset = HUB_ZIP_ASSETS.get(hub_key, "")
+    exe_name = asset[:-4] + ".exe" if asset.lower().endswith(".zip") else ""
+    if not exe_name:
+        return None
+
+    local = localappdata_root()
+    search_roots: list[Path] = []
+    search_roots.extend(_user_desktop_dirs())
+    dl = _user_downloads_dir()
+    if dl is not None:
+        search_roots.append(dl)
+    search_roots.extend(
+        [
+            local / "Programs" / "PCCommand",
+            local / "Programs" / "PC Command",
+            local / "Programs" / "Mr-Aurevo-X",
+            local / "PCCommand",
+            local / "Programs",
+        ]
+    )
+    pf = os.environ.get("ProgramFiles") or r"C:\Program Files"
+    pfx86 = os.environ.get("ProgramFiles(x86)") or r"C:\Program Files (x86)"
+    search_roots.extend([Path(pf) / "PCCommand", Path(pfx86) / "PCCommand"])
+
+    seen: set[Path] = set()
+    for root in search_roots:
+        try:
+            root = root.resolve()
+        except OSError:
+            continue
+        if root in seen or not root.is_dir():
+            continue
+        seen.add(root)
+        direct = root / exe_name
+        if direct.is_file():
+            return root
+        # One level of subfolders (zip extract folder)
+        try:
+            for child in root.iterdir():
+                if child.is_dir():
+                    hit = child / exe_name
+                    if hit.is_file():
+                        return child.resolve()
+        except OSError:
+            continue
+    return None
+
+
+def about_local_paths(app_dir: Path, *, hub_id: str | None = None) -> dict[str, Any]:
+    """Labeled absolute paths for About — uninstall / manual cleanup guidance.
+
+    Never expose monorepo / SoT / clone paths (even when running via Lancer.cmd).
+    ``app_dir`` is kept for API compatibility; it is not shown in the UI.
+
+    Install path = real folder of the running / found Launch-Hub-*.exe
+    (Desktop, USB, …) — never a invented Programs path.
+    """
+    _ = app_dir  # API compat — never surface SoT/clone in About
+    hub_key = normalize_hub_id(hub_id or "")
+    entries: list[dict[str, Any]] = []
+
+    exe_dir = resolve_hub_exe_dir(hub_id)
+    if exe_dir is not None:
+        entries.append(
+            {
+                "id": "app",
+                "label": "Install (dossier de l’exe)",
+                "path": str(exe_dir),
+                "hint": "Dossier réel de l’exe lancé (Bureau, USB, Downloads…) — à supprimer pour désinstaller.",
+            }
+        )
+
+    entries.append(
+        {
+            "id": "version",
+            "label": "Métadonnées / version",
+            "path": str(default_install_dir()),
+            "hint": r"%LOCALAPPDATA%\PCCommand — version.json et métadonnées suite.",
+        }
+    )
+    entries.append(
+        {
+            "id": "settings",
+            "label": "Préférences (accent, langue, vérif. maj)",
+            "path": str(user_settings_path()),
+            "hint": "Fichier partagé Mr-Aurevo-X — à garder si d’autres apps l’utilisent.",
+        }
+    )
+
+    if hub_key == "reseau":
+        roadway = localappdata_root() / "Mr-Aurevo-X" / "RoadWay-X"
+        entries.append(
+            {
+                "id": "data-roadway",
+                "label": "Données Traffic",
+                "path": str(roadway),
+                "hint": "Caches / alertes Traffic — optionnel si tu n’utilises plus le module.",
+                "optional": True,
+            }
+        )
+
+    return {"ok": True, "hubId": hub_key or None, "paths": entries}
+
+
 def hub_install_dir_candidates() -> list[Path]:
     root = localappdata_root()
     names = [HUB_INSTALL_DIR, *_LEGACY_HUB_INSTALL_DIRS]
@@ -259,6 +447,20 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
             "local": local,
         }
 
+    if not is_github_update_check_enabled():
+        return {
+            "ok": True,
+            "updateAvailable": False,
+            "skipped": True,
+            "reason": "checkGithubUpdates disabled",
+            "local": local,
+            "hubId": hub_key,
+            "repo": hub_repo,
+            "checkGithubUpdates": False,
+            "message": None,
+            "error": None,
+        }
+
     last_err = None
     try:
         raw = _api_latest_release(hub_repo)
@@ -279,6 +481,7 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
             "error": last_err or "no release",
             "local": local,
             "hubId": hub_key,
+            "checkGithubUpdates": True,
         }
 
     remote = str(chosen.get("remote") or "")
@@ -294,6 +497,7 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
         "asset": chosen.get("asset"),
         "hasZip": chosen.get("hasZip"),
         "releaseUrl": chosen.get("releaseUrl"),
+        "checkGithubUpdates": True,
         "message": (
             f"Nouvelle version {remote} (installée : {local or '?'})"
             if available

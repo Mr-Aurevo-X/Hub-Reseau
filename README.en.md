@@ -1,46 +1,51 @@
 [Français](README.md) · [English](README.en.md)
 
-# Hub-Reseau — PC Command
+# PC Command | Network
 
-**Read-only** distribution. No pull requests or issues (`CONTRIBUTING.md`).
+**Network** hub — adapters, map, live traffic, Wi‑Fi. Home ↓↑ · TCP/NIC, native modules.  
+**Void Glow** · **local-first** (hosts you type · Traffic reputation opt-in · optional GitHub check) · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
 
-**Network** hub. License: PolyForm Noncommercial 1.0.0. Publisher: **Mr-Aurevo-X**.
+## Preview
 
-**Local-first.** Honest network exceptions: tests to hosts you type; optional RoadWay-X reputation (URLhaus / AbuseIPDB). See `PRIVACY.md`.
-
-## Overview
-
-| Home | Module |
-|---------|--------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![NetMap](docs/screenshots/netmap.png) |
+| Home | Traffic |
+|------|---------|
+| ![Home](docs/screenshots/dashboard.png) | ![Traffic](docs/screenshots/traffic.png) |
 
 ## Modules
 
 | Module | Role |
 |--------|------|
-| NetAdmin | Adapters, hosts, firewall |
+| NetAdmin | Adapters, hosts, firewall, DNS |
 | NetMap | Connections · ping · proxy · shares |
-| RoadWay-X | Live traffic · alerts · opt-in reputation |
-| WifiKey | Wi-Fi profiles (ConfirmGate) |
+| **Traffic** | Live traffic · alerts · opt-in reputation |
+| WifiKey | WLAN profiles (ConfirmGate) |
 
-## Where it installs
+## Why this hub
+
+- **Read-only** network Home — throughput, TCP, adapters
+- ConfirmGate on mutators (DNS, kill, Wi‑Fi…)
+- FR | EN · support · About (Terms / Privacy / Legal notice / Notices)
+- Traffic data: `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\`
+
+## Where it lives
 
 | Mode | Location |
 |------|----------|
-| **Release** (`Launch-Hub-Reseau.zip`) | **Portable** folder: extract anywhere, run `Launch-Hub-Reseau.exe` from that folder. |
-| **Version / stamp** | `%LOCALAPPDATA%\PCCommand\` |
-| **Accent / language prefs** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (if present) |
-| **Dev (sources)** | Repo clone + `Lancer.cmd` |
+| **Release** (`Launch-Hub-Reseau.zip`) | **Portable** folder — `Launch-Hub-Reseau.exe` |
+| Metadata / version | `%LOCALAPPDATA%\PCCommand\` |
+| Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
+| Traffic data | `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\` |
+| Dev | Clone + `Lancer.cmd` |
 
-Download: [Hub-Reseau Releases](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases).
+Download: [Hub-Reseau Releases](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · tag **v2.0.0**
 
-HWND titles: `PC Command | Network`. Isolation: `ISOLATION.md`.
+## Launch
 
 ```bat
 Lancer.cmd
 ```
 
-Windows may flag the app as potentially unsafe: binaries are not Authenticode-signed (no paid publisher certificate). That is a SmartScreen reputation warning, not an antivirus verdict.
+SmartScreen possible (unsigned binaries). Title: `PC Command | Network` / `[Module]`. See `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
 
 ---
 

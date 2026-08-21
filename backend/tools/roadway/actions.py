@@ -109,7 +109,7 @@ def block_remote(
         port_n = int(port or 0)
     except (TypeError, ValueError):
         port_n = 0
-    name = (rule_name or "").strip() or f"RoadWay-X block {ip_n}" + (f":{port_n}" if port_n else "")
+    name = (rule_name or "").strip() or f"Traffic block {ip_n}" + (f":{port_n}" if port_n else "")
     # Sanitize rule name for netsh
     name = "".join(c if c.isalnum() or c in " ._-" else "_" for c in name)[:60]
     remote = f"{ip_n},{port_n}" if port_n > 0 else ip_n

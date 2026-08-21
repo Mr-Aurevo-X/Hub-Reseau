@@ -11,8 +11,8 @@
   const DEFAULT_ACCENT = "#e03545";
   const DEFAULT_THEME = "dark";
   const PRIVACY = {
-    fr: "Aucune collecte de données par Mr-Aurevo-X. Tout reste sur cet ordinateur.",
-    en: "Mr-Aurevo-X does not collect your data. Everything stays on this PC.",
+    fr: "100 % local-first. Seule connexion hors machine : vérif. version GitHub (si activée dans À propos). Sinon zéro réseau hors actions explicites des modules.",
+    en: "100% local-first. Only outbound connection: optional GitHub version check (About). Otherwise no network except explicit module actions.",
   };
 
   function normalizeAccent(value) {
