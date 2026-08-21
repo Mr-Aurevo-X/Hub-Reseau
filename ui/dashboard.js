@@ -4,7 +4,7 @@
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
 /**
- * Hub-Reseau Accueil — Atelier live metrics + tuiles modules (zéro mutator).
+ * Hub-Reseau Accueil — Void Glow live metrics + tuiles modules (zéro mutator).
  */
 
 const HUB_LABEL = "Network";
@@ -18,7 +18,6 @@ const FALLBACK_MODULES = [
   { id: "roadway", label: "RoadWay-X", desc: "Trafic live · alertes heuristiques · DNS · confiance", ico: "↗" },
   { id: "wifikey", label: "WifiKey", desc: "Profils WLAN et clés de sécurité", ico: "≋" },
 ];
-
 const ICO = Object.fromEntries(FALLBACK_MODULES.map((m) => [m.id, m.ico]));
 
 const HISTORY = 60;
