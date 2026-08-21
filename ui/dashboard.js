@@ -4,8 +4,8 @@
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
 /**
- * Hub Accueil — Filament Void Glow (dash-prop · gauge-card).
- * Legacy cyber Accueil (Throughput / density-map) removed.
+ * Hub Accueil Réseau — Filament Void Glow (dash-prop · gauge-card).
+ * Hero Down/Up only · TCP/NIC KPIs · adapters — lecture seule.
  */
 const HUB_LABEL = "Network";
 const HUB_BLURB = "PC Command — lecture seule · zéro mutator";
@@ -21,11 +21,13 @@ const ICO = Object.fromEntries(FALLBACK_MODULES.map((m) => [m.id, m.ico]));
 
 const HISTORY = 60;
 const ARC_LEN = 141.37;
+const KPI_MS = 4000;
 
 let metricsUrl = "";
 let tickTimer = null;
+let kpiTimer = null;
 let clockTimer = null;
-const hist = { cpu: [], ram: [], gpu: [], netUp: [], netDown: [] };
+const hist = { down: [], up: [], netUp: [], netDown: [] };
 let peakDn = 0;
 let peakUp = 0;
 let lastNet = null;
@@ -87,27 +89,25 @@ function metricsMarkup() {
     </header>
 
     <div class="dash-prop">
-      <section class="gauges-block" aria-label="CPU RAM GPU">
-        <div class="gauges">
-          ${gaugeCard("cpu", "CPU")}
-          ${gaugeCard("ram", "RAM")}
-          ${gaugeCard("gpu", "GPU")}
+      <section class="gauges-block" aria-label="Débit Down Up">
+        <div class="gauges gauges-2">
+          ${gaugeCard("down", "↓ Down")}
+          ${gaugeCard("up", "↑ Up")}
         </div>
       </section>
-      <section class="mid-row" aria-label="Uptime et processus">
-        <article class="kpi kpi-up">
-          <small>Uptime</small>
-          <b id="uptime">—</b>
-          <em id="hostname">host</em>
-          <span class="since" id="since">—</span>
+      <section class="mid-row" aria-label="TCP et NIC">
+        <article class="kpi">
+          <small>TCP établis</small>
+          <b id="tcpCount">—</b>
+          <em>connexions actives</em>
         </article>
         <article class="kpi">
-          <small>Processus</small>
-          <b id="procCount">—</b>
-          <em>actifs</em>
+          <small>NIC Up</small>
+          <b id="nicUp">—</b>
+          <em id="nicNames">—</em>
         </article>
       </section>
-      <section class="bottom-row" aria-label="Réseau et disques">
+      <section class="bottom-row" aria-label="Trafic et adaptateurs">
         <article class="kpi kpi-net">
           <small><span class="live-dot"></span>Trafic · live</small>
           <div class="net-live">
@@ -124,10 +124,10 @@ function metricsMarkup() {
         </article>
         <article class="kpi kpi-disk">
           <div class="disk-head">
-            <small>Disques</small>
-            <b class="count" id="diskCount">— vol.</b>
+            <small>Adaptateurs</small>
+            <b class="count" id="adapterCount">—</b>
           </div>
-          <div class="disk-stack" id="diskStack">
+          <div class="disk-stack" id="adapterStack">
             <div class="disk-empty">Chargement…</div>
           </div>
         </article>
@@ -142,14 +142,6 @@ function metricsMarkup() {
   </div>`;
 }
 
-function fmtUptime(s) {
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}j ${h}h`;
-  return `${h}h ${m}m`;
-}
-
 function push(key, val) {
   hist[key].push(val == null || Number.isNaN(val) ? 0 : Number(val));
   while (hist[key].length > HISTORY) hist[key].shift();
@@ -162,7 +154,7 @@ function levelTone(pct) {
   return { cls: "crit", color: "#e03545" };
 }
 
-function setGauge(kind, pct, name, sub, tempC) {
+function setGauge(kind, pct, name, sub, tempC, valText) {
   const tone = levelTone(pct);
   const card = el(`g-${kind}`);
   if (card) {
@@ -175,7 +167,9 @@ function setGauge(kind, pct, name, sub, tempC) {
     arc.style.stroke = tone.color;
     arc.setAttribute("stroke-dashoffset", String(offset));
   }
-  if (el(`${kind}Val`)) el(`${kind}Val`).textContent = `${Math.round(pct)}%`;
+  if (el(`${kind}Val`)) {
+    el(`${kind}Val`).textContent = valText != null ? String(valText) : `${Math.round(pct)}%`;
+  }
   if (el(`${kind}Name`)) el(`${kind}Name`).textContent = name || "—";
   if (el(`${kind}Sub`)) el(`${kind}Sub`).textContent = sub || "—";
   const temp = el(`${kind}Temp`);
@@ -197,9 +191,10 @@ function drawSpark(kind, data, color) {
   if (!svg || !data || data.length < 2) return;
   const w = 120;
   const h = 32;
+  const max = Math.max(1, ...data);
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * w;
-    const y = h - (Math.min(100, v) / 100) * (h - 4) - 2;
+    const y = h - (Math.min(max, v) / max) * (h - 4) - 2;
     return [x, y];
   });
   const ln = pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
@@ -246,81 +241,61 @@ function drawNetSpark() {
   svg.querySelector(".ln-up")?.setAttribute("points", ln(pu));
 }
 
-function renderDisks(disks) {
-  const stack = el("diskStack");
-  const count = el("diskCount");
+function fmtRate(kb) {
+  if (kb >= 1024) {
+    return { text: (kb / 1024).toFixed(1), unit: "MB/s", labelKb: `${kb.toFixed(0)} KB/s` };
+  }
+  return { text: kb < 10 ? kb.toFixed(1) : kb.toFixed(0), unit: "KB/s", labelKb: `${kb.toFixed(0)} KB/s` };
+}
+
+function ratePct(rateKb, peakKb) {
+  const denom = Math.max(peakKb, rateKb, 256);
+  return Math.min(100, (rateKb / denom) * 100);
+}
+
+function renderAdapters(adapters, nicUp, nicNames) {
+  const stack = el("adapterStack");
+  const count = el("adapterCount");
   if (!stack) return;
-  const rows = Array.isArray(disks) ? disks : [];
-  if (count) count.textContent = `${rows.length} vol.`;
+  let rows = Array.isArray(adapters) ? adapters : [];
+  if (!rows.length && nicNames) {
+    rows = String(nicNames)
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, status: "Up" }));
+  }
+  if (count) {
+    const up = nicUp != null ? Number(nicUp) : rows.filter((a) => /up/i.test(String(a.status || ""))).length;
+    count.textContent = `${up} up`;
+  }
   if (!rows.length) {
-    stack.innerHTML = `<div class="disk-empty">Aucun volume</div>`;
+    stack.innerHTML = `<div class="disk-empty">Aucun adaptateur</div>`;
     return;
   }
   stack.innerHTML = rows
     .slice(0, 8)
-    .map((d) => {
-      const pct = Math.round(d.percent ?? d.used_percent ?? 0);
-      let cls = "ok";
-      if (pct >= 90) cls = "crit";
-      else if (pct >= 75) cls = "warn";
-      if (d.bus === "USB" || d.kind === "removable") cls += " usb";
-      const letter = esc((d.device || d.mount || d.letter || "?").replace(/\\+$/, ""));
-      const title = esc(d.label || d.name || letter);
-      return `<div class="drow ${cls}"><span class="ltr">${letter}</span><div class="dbar" title="${title}"><i style="width:${pct}%"></i></div><span class="pct">${pct}%</span></div>`;
+    .map((a) => {
+      const name = esc(a.name || a.Name || "?");
+      const st = String(a.status || a.Status || "—");
+      const up = /up/i.test(st);
+      const cls = up ? "ok" : "";
+      const pct = up ? 100 : 0;
+      const short = name.length > 10 ? `${name.slice(0, 9)}…` : name;
+      return `<div class="drow ${cls}"><span class="ltr" title="${name}">${short}</span><div class="dbar" title="${esc(st)}"><i style="width:${pct}%"></i></div><span class="pct">${esc(st)}</span></div>`;
     })
     .join("");
 }
 
-function apply(data) {
-  const cpu = data.cpu || {};
-  const ram = data.ram || {};
-  const gpu = data.gpu || {};
-  const load = data.load || {};
-  const cpuPct = Number(cpu.percent ?? load.score ?? 0);
-  const ramPct = Number(ram.percent ?? 0);
-  const gpuAvail = !!gpu.available;
-  const gpuPct = gpuAvail ? Number(gpu.load_percent ?? 0) : 0;
-
-  push("cpu", cpuPct);
-  push("ram", ramPct);
-  push("gpu", gpuPct);
-
-  const cores = `${cpu.cores_physical || "?"}c / ${cpu.cores_logical || "?"}t`;
-  const loadLabel = (load.label || "").toUpperCase() || "—";
-  setGauge("cpu", cpuPct, cpu.model || "CPU", `${cores} · ${loadLabel}`, cpu.temp_c ?? cpu.temperature);
-  setGauge(
-    "ram",
-    ramPct,
-    `${ram.used_gb ?? "—"} / ${ram.total_gb ?? "—"} Go`,
-    "working set",
-    null
-  );
-  setGauge(
-    "gpu",
-    gpuPct,
-    gpu.name || "GPU",
-    gpuAvail
-      ? `VRAM ${gpu.memory_used_mb ?? "—"}/${gpu.memory_total_mb ?? "—"} MB`
-      : data.degraded?.gpu_note || "N/A",
-    gpu.temp_c ?? gpu.temperature
-  );
-
-  if (el("procCount")) el("procCount").textContent = (data.procs ?? 0).toLocaleString("fr-FR");
-  if (el("uptime")) el("uptime").textContent = fmtUptime(data.uptime_sec ?? 0);
-  if (el("hostname")) el("hostname").textContent = data.hostname || "host";
-  if (el("since")) {
-    const boot = data.boot_time || data.boot_iso || "";
-    el("since").textContent = boot ? `boot ${boot}` : (data.os || "—");
-  }
-
+function applyMetrics(data) {
   let downKb = 0;
   let upKb = 0;
   const net = data.network || {};
   const ts = data.ts || Date.now() / 1000;
   if (lastNet && lastTs) {
     const dt = Math.max(ts - lastTs, 1e-3);
-    downKb = Math.max(0, (net.bytes_recv - lastNet.bytes_recv) / dt / 1024);
-    upKb = Math.max(0, (net.bytes_sent - lastNet.bytes_sent) / dt / 1024);
+    downKb = Math.max(0, (Number(net.bytes_recv) - Number(lastNet.bytes_recv)) / dt / 1024);
+    upKb = Math.max(0, (Number(net.bytes_sent) - Number(lastNet.bytes_sent)) / dt / 1024);
   }
   lastNet = net;
   lastTs = ts;
@@ -328,13 +303,53 @@ function apply(data) {
   peakUp = Math.max(peakUp, upKb);
   push("netDown", downKb);
   push("netUp", upKb);
+  push("down", ratePct(downKb, peakDn));
+  push("up", ratePct(upKb, peakUp));
+
+  const dn = fmtRate(downKb);
+  const up = fmtRate(upKb);
+  const peakDnF = fmtRate(peakDn);
+  const peakUpF = fmtRate(peakUp);
+  setGauge(
+    "down",
+    ratePct(downKb, peakDn),
+    dn.unit,
+    `pic 60s · ${peakDnF.text} ${peakDnF.unit}`,
+    null,
+    dn.text
+  );
+  setGauge(
+    "up",
+    ratePct(upKb, peakUp),
+    up.unit,
+    `pic 60s · ${peakUpF.text} ${peakUpF.unit}`,
+    null,
+    up.text
+  );
+
   if (el("netDn")) el("netDn").textContent = downKb.toFixed(0);
   if (el("netUp")) el("netUp").textContent = upKb.toFixed(0);
-  if (el("netPeak")) el("netPeak").textContent = `pic 60s · ↓ ${peakDn.toFixed(0)} · ↑ ${peakUp.toFixed(0)}`;
+  if (el("netPeak")) {
+    el("netPeak").textContent = `pic 60s · ↓ ${peakDn.toFixed(0)} · ↑ ${peakUp.toFixed(0)}`;
+  }
   drawNetSpark();
-  renderDisks(data.disk || []);
 
   if (el("livePill")) {
+    el("livePill").classList.remove("off");
+    el("livePill").innerHTML = "<i></i> LIVE";
+  }
+}
+
+function applyKpis(k) {
+  if (!k || !k.ok) return;
+  if (el("tcpCount")) {
+    el("tcpCount").textContent =
+      k.tcpEstablished != null ? Number(k.tcpEstablished).toLocaleString("fr-FR") : "—";
+  }
+  if (el("nicUp")) el("nicUp").textContent = k.nicUp != null ? String(k.nicUp) : "—";
+  if (el("nicNames")) el("nicNames").textContent = k.nicNames || "—";
+  renderAdapters(k.adapters, k.nicUp, k.nicNames);
+  if (el("livePill") && !metricsUrl) {
     el("livePill").classList.remove("off");
     el("livePill").innerHTML = "<i></i> LIVE";
   }
@@ -361,7 +376,7 @@ async function resolveMetricsUrl() {
   return "";
 }
 
-async function tick() {
+async function tickMetrics() {
   if (!metricsUrl) {
     offline();
     return;
@@ -369,10 +384,19 @@ async function tick() {
   try {
     const res = await fetch(metricsUrl, { cache: "no-store" });
     if (!res.ok) throw new Error("bad");
-    apply(await res.json());
+    applyMetrics(await res.json());
   } catch {
     offline();
   }
+}
+
+async function tickKpis() {
+  const a = api();
+  try {
+    if (a?.dashboard?.get_kpis) {
+      applyKpis(await a.dashboard.get_kpis());
+    }
+  } catch (_) {}
 }
 
 function clock() {
@@ -425,6 +449,10 @@ export function unmount() {
     clearInterval(tickTimer);
     tickTimer = null;
   }
+  if (kpiTimer) {
+    clearInterval(kpiTimer);
+    kpiTimer = null;
+  }
   if (clockTimer) {
     clearInterval(clockTimer);
     clockTimer = null;
@@ -441,11 +469,13 @@ export async function mount(root) {
   unmount();
   root.innerHTML = metricsMarkup();
   const status = el("dashStatus");
-  if (status) status.textContent = "Lecture locale · métriques live · aucune donnée envoyée hors machine.";
+  if (status) status.textContent = "Lecture locale réseau · zéro mutator · aucune donnée envoyée hors machine.";
   await mountTiles();
   clock();
   clockTimer = setInterval(clock, 1000);
   metricsUrl = await resolveMetricsUrl();
-  await tick();
-  tickTimer = setInterval(tick, 1000);
+  await tickMetrics();
+  await tickKpis();
+  tickTimer = setInterval(tickMetrics, 1000);
+  kpiTimer = setInterval(tickKpis, KPI_MS);
 }

@@ -156,6 +156,7 @@
 
 /* ===== GAUGES B · arc + spark unique + seuil couleur ===== */
 .gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem}
+.gauges.gauges-2{grid-template-columns:1fr 1fr}
 .gauges-block{
   background:transparent;border:0;padding:0;
   display:flex;flex-direction:column;gap:.7rem;
@@ -211,7 +212,15 @@
   display:flex;flex-direction:column;min-height:118px;height:118px;box-sizing:border-box;overflow:hidden}
 .kpi small{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .kpi b{display:block;font-family:var(--mono);font-size:1.15rem;margin:.15rem 0}
+.kpi b.ok{color:var(--ok)}.kpi b.warn{color:var(--warn)}.kpi b.crit{color:var(--accent)}
 .kpi em{font-style:normal;font-size:.75rem;color:var(--muted)}
+.status-banner{grid-column:1/-1;min-height:110px;height:auto !important}
+.status-banner b{font-size:1rem;margin-top:.35rem}
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.45rem}
+.mini-chip{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;
+  padding:.2rem .45rem;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.mini-chip.on{color:var(--ok);border-color:rgba(61,214,140,.35);background:rgba(61,214,140,.1)}
+.mini-chip.warn{color:var(--warn);border-color:rgba(224,168,74,.35);background:rgba(224,168,74,.1)}
 /* —— Trafic internet live —— */
 .kpi-net .net-live{display:flex;justify-content:space-between;gap:.5rem;margin-top:.2rem}
 .kpi-net .rate{font-family:var(--mono);font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums}

@@ -494,16 +494,23 @@ class DashboardApi:
             data = _ps_json(
                 r"""
 $ErrorActionPreference='SilentlyContinue'
-$nics = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up')
+$all = @(Get-NetAdapter -ErrorAction SilentlyContinue | Select-Object -First 8 Name, Status)
+$nics = @($all | Where-Object Status -eq 'Up')
 $tcp = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue)
 [pscustomobject]@{
   nicUp = $nics.Count
   nicNames = @($nics | Select-Object -First 3 -ExpandProperty Name) -join ', '
   tcpEstablished = $tcp.Count
-} | ConvertTo-Json -Compress
+  adapters = @($all | ForEach-Object {
+    [pscustomobject]@{ name = [string]$_.Name; status = [string]$_.Status }
+  })
+} | ConvertTo-Json -Compress -Depth 4
 """
             )
             if isinstance(data, dict):
+                adapters = data.get("adapters")
+                if isinstance(adapters, dict):
+                    data["adapters"] = [adapters]
                 base.update(data)
         except Exception as exc:  # noqa: BLE001
             base["partial"] = True
