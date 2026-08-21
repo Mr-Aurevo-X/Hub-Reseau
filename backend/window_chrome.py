@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+﻿# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
 
@@ -6,7 +6,7 @@
 
 Drag and edge-resize go through js_api only (ReleaseCapture + WM_NCLBUTTONDOWN,
 plus pointer-driven SetWindowPos via get/set_window_bounds).
-Do NOT install a Win32 WndProc NCHITTEST subclass — that path blacks out WebView2.
+Do NOT install a Win32 WndProc NCHITTEST subclass â€” that path blacks out WebView2.
 """
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ def nc_drag(hwnd: int, ht: int) -> dict:
 
 
 class WindowChromeMixin:
-    """Mixin for tool Api classes — expects self._window set via set_window / bind."""
+    """Mixin for tool Api classes â€” expects self._window set via set_window / bind."""
 
     _window: Any = None
     _maximized: bool = False
@@ -218,7 +218,7 @@ class WindowChromeMixin:
         return nc_drag(self._resolve_hwnd(), ht)
 
     def get_window_bounds(self) -> dict:
-        """Screen rect — used by pointer-driven frameless resize."""
+        """Screen rect â€” used by pointer-driven frameless resize."""
         if sys.platform != "win32":
             return {"ok": False, "error": "unsupported"}
         return window_bounds(self._resolve_hwnd())
@@ -241,7 +241,7 @@ def create_tool_window(
     width: int = TOOL_WIDTH,
     height: int = TOOL_HEIGHT,
     min_size: tuple[int, int] = TOOL_MIN_SIZE,
-    background_color: str = "#06070c",
+    background_color: str = "#030304",
     **extra: Any,
 ) -> Any:
     """Create a frameless, resizable tool window and bind js_api._window."""
