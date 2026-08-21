@@ -48,20 +48,70 @@ def _ps_json(script: str, timeout: int = 60) -> Any:
         return {"raw": out, "stderr": err, "returncode": proc.returncode}
 
 
+def _as_bool(val: Any) -> bool:
+    if isinstance(val, bool):
+        return val
+    if val is None:
+        return False
+    s = str(val).strip().lower()
+    return s in {"1", "true", "enabled", "yes"}
+
+
+def _str_field(row: dict[str, Any], *keys: str) -> str:
+    for k in keys:
+        if k in row and row[k] is not None:
+            return str(row[k]).strip()
+    return ""
+
+
+def _normalize_rule(row: dict[str, Any]) -> dict[str, Any]:
+    """Map PowerShell PascalCase / enum JSON → stable lowercase keys for the UI."""
+    name = _str_field(row, "name", "Name")
+    display = _str_field(row, "displayName", "DisplayName") or name
+    return {
+        "name": name,
+        "displayName": display,
+        "enabled": _as_bool(row.get("enabled", row.get("Enabled"))),
+        "direction": _str_field(row, "direction", "Direction"),
+        "action": _str_field(row, "action", "Action"),
+        "protocol": _str_field(row, "protocol", "Protocol") or "—",
+        "profile": _str_field(row, "profile", "Profile"),
+    }
+
+
 def list_rules() -> dict:
     try:
+        # Emit lowercase keys + .ToString() on enums so ConvertTo-Json is not numeric / PascalCase-only.
+        # Protocol via PortFilter would be ~1 call/rule (too slow for 800); leave "—" unless present.
         script = r"""
 $ErrorActionPreference = 'SilentlyContinue'
-Get-NetFirewallRule | Select-Object Name, DisplayName, Enabled, Direction, Action, Profile |
-  Sort-Object DisplayName | Select-Object -First 800 | ConvertTo-Json -Compress -Depth 3
+Get-NetFirewallRule |
+  Sort-Object DisplayName |
+  Select-Object -First 800 |
+  ForEach-Object {
+    [pscustomobject]@{
+      name        = [string]$_.Name
+      displayName = $(
+        $dn = [string]$_.DisplayName
+        if ($dn -like '@{*') { [string]$_.Name } else { $dn }
+      )
+      enabled     = ($_.Enabled.ToString() -eq 'True')
+      direction   = $_.Direction.ToString()
+      action      = $_.Action.ToString()
+      protocol    = ''
+      profile     = $_.Profile.ToString()
+    }
+  } | ConvertTo-Json -Compress -Depth 3
 """
         data = _ps_json(script, timeout=120)
         if data is None:
-            rows: list = []
+            rows_raw: list = []
         elif isinstance(data, dict):
-            rows = [data]
+            rows_raw = [data]
         else:
-            rows = list(data)
+            rows_raw = list(data)
+        rows = [_normalize_rule(r if isinstance(r, dict) else {}) for r in rows_raw]
+        rows = [r for r in rows if r.get("name")]
         return {"ok": True, "rules": rows, "count": len(rows), "admin": is_admin()}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}

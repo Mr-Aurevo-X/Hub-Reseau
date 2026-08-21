@@ -288,7 +288,12 @@ export async function mount(root) {
 
     function renderRules() {
       const q = rulesFilter.toLowerCase();
-      const rows = q ? rulesData.filter((r) => (r.name || "").toLowerCase().includes(q)) : rulesData;
+      const rows = q
+        ? rulesData.filter((r) => {
+            const label = `${r.displayName || ""} ${r.name || ""}`.toLowerCase();
+            return label.includes(q);
+          })
+        : rulesData;
       if (!rows.length) {
         emptyEl.hidden = false;
         wrapEl.hidden = true;
@@ -302,14 +307,16 @@ export async function mount(root) {
       const frag = document.createDocumentFragment();
       for (const r of rows) {
         const tr = document.createElement("tr");
-        const on = r.enabled !== false;
+        const on = r.enabled === true;
+        const id = r.name || "";
+        const label = r.displayName || r.name || "";
         tr.innerHTML =
-          `<td class="wrap">${esc(r.name || "")}</td>` +
+          `<td class="wrap">${esc(label)}</td>` +
           `<td>${esc(r.direction || "")}</td>` +
           `<td>${esc(r.action || "")}</td>` +
-          `<td>${esc(r.protocol || "")}</td>` +
+          `<td>${esc(r.protocol || "—")}</td>` +
           `<td><span style="color:${on ? "var(--ok,#3dd68c)" : "var(--muted)"}">${on ? t("naFwEnabled") : t("naFwDisabled")}</span></td>` +
-          `<td><button type="button" class="action-btn${on ? "" : " danger"}" data-rule="${esc(r.name)}" data-enabled="${on}">` +
+          `<td><button type="button" class="action-btn${on ? "" : " danger"}" data-rule="${esc(id)}" data-label="${esc(label)}" data-enabled="${on}">` +
           `${on ? t("naFwDisable") : t("naFwEnable")}</button></td>`;
         frag.appendChild(tr);
       }
@@ -320,10 +327,12 @@ export async function mount(root) {
       const btn = e.target.closest("[data-rule]");
       if (!btn || !api?.prepare_action) return;
       const name = btn.dataset.rule;
+      if (!name) return;
+      const label = btn.dataset.label || name;
       const curEnabled = btn.dataset.enabled === "true";
       const next = !curEnabled;
       const action = next ? t("naFwEnable") : t("naFwDisable");
-      const ok = await askConfirm(t("naFwConfirm", { action, name }), t("naFwConfirmTitle"));
+      const ok = await askConfirm(t("naFwConfirm", { action, name: label }), t("naFwConfirmTitle"));
       if (!ok) return;
       setStatus(t("naFwModifying"));
       try {
