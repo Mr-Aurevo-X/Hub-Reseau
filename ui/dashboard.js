@@ -4,13 +4,12 @@
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
 /**
- * Hub-Reseau Accueil — Void Glow live metrics + tuiles modules (zéro mutator).
+ * Hub Accueil — Filament Void Glow (dash-prop · gauge-card).
+ * Legacy cyber Accueil (Throughput / density-map) removed.
  */
-
 const HUB_LABEL = "Network";
-const HUB_BLURB = "PC Command — live metrics (read-only) · no mutators";
-const SHOW_VIEW =
-  () => window.HubReseau?.showView || window.HubShell?.showView;
+const HUB_BLURB = "PC Command — lecture seule · zéro mutator";
+const SHOW_VIEW = () => window.HubReseau?.showView || window.HubShell?.showView;
 
 const FALLBACK_MODULES = [
   { id: "netadmin", label: "NetAdmin", desc: "Adaptateurs réseau · fichier hosts · règles pare-feu", ico: "⌬" },
@@ -21,12 +20,14 @@ const FALLBACK_MODULES = [
 const ICO = Object.fromEntries(FALLBACK_MODULES.map((m) => [m.id, m.ico]));
 
 const HISTORY = 60;
-const ARC_LEN = 283;
+const ARC_LEN = 141.37;
 
 let metricsUrl = "";
 let tickTimer = null;
 let clockTimer = null;
 const hist = { cpu: [], ram: [], gpu: [], netUp: [], netDown: [] };
+let peakDn = 0;
+let peakUp = 0;
 let lastNet = null;
 let lastTs = null;
 
@@ -46,162 +47,106 @@ function el(id) {
   return document.getElementById(id);
 }
 
+function gaugeCard(kind, lab) {
+  return `
+  <article class="gauge-card" id="g-${kind}" style="--gc:var(--ok,#3dd68c)">
+    <div class="arc-wrap">
+      <svg viewBox="0 0 120 70" aria-hidden="true">
+        <path class="trk" d="M15 58 A45 45 0 0 1 105 58"/>
+        <path class="arc" id="${kind}Arc" d="M15 58 A45 45 0 0 1 105 58"
+          stroke-dasharray="${ARC_LEN}" stroke-dashoffset="${ARC_LEN}"/>
+      </svg>
+      <span class="val" id="${kind}Val">—</span>
+    </div>
+    <div class="g-meta">
+      <p class="lab">${lab}</p>
+      <p class="name" id="${kind}Name">—</p>
+      <p class="sub" id="${kind}Sub">—</p>
+      <p class="temp" id="${kind}Temp" hidden><span class="t-dot"></span><span class="t-txt"></span></p>
+      <svg class="spark-mini" id="${kind}Spark" viewBox="0 0 120 32" aria-hidden="true">
+        <path class="area" d=""/>
+        <polyline class="ln" points=""/>
+      </svg>
+    </div>
+  </article>`;
+}
+
 function metricsMarkup() {
   return `
   <div class="hub-dash-root">
     <header class="hub-page-header hub-dash-head">
       <div>
-        <h1>${esc(HUB_LABEL)}</h1>
+        <p class="kicker">Hub ${esc(HUB_LABEL)} · Void Glow</p>
+        <h1>Accueil</h1>
         <p>${esc(HUB_BLURB)}</p>
       </div>
       <div class="hub-dash-live">
-        <span class="clock" id="clock">—</span>
+        <time id="clock">—</time>
         <span class="live-pill off" id="livePill"><i></i> OFF</span>
       </div>
     </header>
 
-    <div class="hub-dash-metrics">
-    <div class="pcd-grid" id="hubMetricsGrid">
-      <section class="panel hero tint-red">
-        <div class="hero-gauge-wrap">
-          <svg class="hero-gauge" viewBox="0 0 220 140" aria-hidden="true">
-            <defs>
-              <linearGradient id="gArc" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#3dd68c"/>
-                <stop offset="55%" stop-color="#f0a33a"/>
-                <stop offset="100%" stop-color="#e03545"/>
-              </linearGradient>
-            </defs>
-            <path class="track" d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke-width="14" stroke-linecap="round"/>
-            <path id="cpuArc" class="arc" d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="url(#gArc)" stroke-width="14" stroke-linecap="round"
-              stroke-dasharray="283" stroke-dashoffset="283"/>
+    <div class="dash-prop">
+      <section class="gauges-block" aria-label="CPU RAM GPU">
+        <div class="gauges">
+          ${gaugeCard("cpu", "CPU")}
+          ${gaugeCard("ram", "RAM")}
+          ${gaugeCard("gpu", "GPU")}
+        </div>
+      </section>
+      <section class="mid-row" aria-label="Uptime et processus">
+        <article class="kpi kpi-up">
+          <small>Uptime</small>
+          <b id="uptime">—</b>
+          <em id="hostname">host</em>
+          <span class="since" id="since">—</span>
+        </article>
+        <article class="kpi">
+          <small>Processus</small>
+          <b id="procCount">—</b>
+          <em>actifs</em>
+        </article>
+      </section>
+      <section class="bottom-row" aria-label="Réseau et disques">
+        <article class="kpi kpi-net">
+          <small><span class="live-dot"></span>Trafic · live</small>
+          <div class="net-live">
+            <div class="rate dn">↓ <b id="netDn">0</b><span>KB/s</span></div>
+            <div class="rate up">↑ <b id="netUp">0</b><span>KB/s</span></div>
+          </div>
+          <p class="net-peak" id="netPeak">pic 60s · ↓ — · ↑ —</p>
+          <svg class="net-spark" id="netSpark" viewBox="0 0 120 36" aria-hidden="true">
+            <path class="area-dn" d=""/>
+            <polyline class="ln-dn" points=""/>
+            <path class="area-up" d=""/>
+            <polyline class="ln-up" points=""/>
           </svg>
-          <div class="hero-center">
-            <b id="cpuPct">--</b>
-            <span class="level" id="cpuLevel">—</span>
-            <small>CPU LOAD</small>
-          </div>
-        </div>
-        <div class="hero-meta">
-          <div><small>Processor</small><strong id="cpuName">…</strong></div>
-          <div class="meta-row">
-            <span><small>Cores</small><b id="cpuCores">—</b></span>
-            <span><small>Clock</small><b id="cpuMhz">—</b></span>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel kpis">
-        <article class="kpi">
-          <div class="kpi-ico crit">◉</div>
-          <div>
-            <small>Processes</small>
-            <b id="procCount">—</b>
-          </div>
-          <em class="up">active</em>
         </article>
-        <article class="kpi">
-          <div class="kpi-ico warn">◈</div>
-          <div>
-            <small>Uptime</small>
-            <b id="uptime">—</b>
+        <article class="kpi kpi-disk">
+          <div class="disk-head">
+            <small>Disques</small>
+            <b class="count" id="diskCount">— vol.</b>
           </div>
-          <em class="muted" id="hostname">host</em>
-        </article>
-        <article class="kpi">
-          <div class="kpi-ico ok">▣</div>
-          <div>
-            <small>RAM used</small>
-            <b id="ramUsed">—</b>
+          <div class="disk-stack" id="diskStack">
+            <div class="disk-empty">Chargement…</div>
           </div>
-          <em class="muted" id="ramTotal">/ —</em>
         </article>
       </section>
-
-      <section class="panel map-block tint-cyan">
-        <div class="split">
-          <div>
-            <h3>Core load</h3>
-            <div class="core-bars" id="coreBars"></div>
-            <div class="pct-row">
-              <span><b id="ramPctLabel">—</b><small>RAM</small></span>
-              <span><b id="gpuPctLabel">—</b><small>GPU</small></span>
-              <span><b id="diskTopPct">—</b><small>DISK</small></span>
-            </div>
-          </div>
-          <div>
-            <h3>Network density</h3>
-            <div class="density-map" id="densityMap" aria-hidden="true"></div>
-            <div class="net-rates">
-              <span>↓ <b id="netDown">0</b> KB/s</span>
-              <span>↑ <b id="netUp">0</b> KB/s</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel charts">
-        <h3>CPU · RAM · GPU — 60s</h3>
-        <canvas id="histCanvas" width="640" height="160"></canvas>
-        <div class="legend">
-          <span class="l-cpu">CPU</span>
-          <span class="l-ram">RAM</span>
-          <span class="l-gpu">GPU</span>
-        </div>
-      </section>
-
-      <section class="panel area tint-cyan">
-        <h3>Throughput spectrum</h3>
-        <canvas id="areaCanvas" width="640" height="110"></canvas>
-      </section>
-
-      <section class="panel risk">
-        <h3>Resource pressure</h3>
-        <div class="bar-row"><span>CPU</span><div class="bar-track"><div class="bar-fill c" id="barCpu"></div></div><span id="barCpuT">—</span></div>
-        <div class="bar-row"><span>RAM</span><div class="bar-track"><div class="bar-fill w" id="barRam"></div></div><span id="barRamT">—</span></div>
-        <div class="bar-row"><span>GPU</span><div class="bar-track"><div class="bar-fill o" id="barGpu"></div></div><span id="barGpuT">—</span></div>
-        <div class="gpu-gauge-row">
-          <div class="mini-gauge" id="gpuRing" style="--p:0%">
-            <span id="gpuRingVal">—</span>
-          </div>
-          <div class="kpi">
-            <small>GPU load</small>
-            <b id="gpuName">—</b>
-            <span class="muted" id="gpuVram">VRAM —</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel disks tint-amber">
-        <div class="panel-head">
-          <h3>Volumes · fixed &amp; USB</h3>
-          <span class="disk-count" id="diskCount">— volumes</span>
-        </div>
-        <div class="disk-grid" id="diskCards">
-          <div class="disk-empty">Chargement des volumes…</div>
-        </div>
-        <div class="os-line">
-          <span class="dot" id="statusDot"></span>
-          <span id="osLine">Connexion metrics…</span>
-        </div>
-      </section>
-    </div>
     </div>
 
     <section class="hub-dash-modules" aria-label="Accès rapide">
-      <h2 class="hub-section-title">Accès rapide</h2>
-      <div class="hub-tile-grid" id="tileGrid"></div>
+      <h2 class="hub-section-title sec">Modules</h2>
+      <div class="mods" id="tileGrid"></div>
       <p class="hub-status" id="dashStatus"></p>
     </section>
-  </div>
-  `;
+  </div>`;
 }
 
 function fmtUptime(s) {
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
+  if (d > 0) return `${d}j ${h}h`;
   return `${h}h ${m}m`;
 }
 
@@ -210,189 +155,120 @@ function push(key, val) {
   while (hist[key].length > HISTORY) hist[key].shift();
 }
 
-function setArc(pct) {
-  const offset = ARC_LEN * (1 - Math.min(100, Math.max(0, pct)) / 100);
-  const arc = el("cpuArc");
-  if (arc) arc.style.strokeDashoffset = String(offset);
+function levelTone(pct) {
+  if (pct < 45) return { cls: "ok", color: "#3dd68c" };
+  if (pct < 75) return { cls: "warn", color: "#e0a84a" };
+  if (pct < 90) return { cls: "hot", color: "#e07020" };
+  return { cls: "crit", color: "#e03545" };
 }
 
-function levelClass(label) {
-  const L = (label || "").toUpperCase();
-  if (L === "LOW") return "ok";
-  if (L === "MEDIUM" || L === "MED") return "warn";
-  return "";
-}
-
-function drawHistory(canvas) {
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    const y = (h / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
+function setGauge(kind, pct, name, sub, tempC) {
+  const tone = levelTone(pct);
+  const card = el(`g-${kind}`);
+  if (card) {
+    card.className = `gauge-card ${tone.cls}`;
+    card.style.setProperty("--gc", tone.color);
   }
-  const series = [
-    { key: "cpu", color: "#e03545", glow: "rgba(224,53,69,0.55)" },
-    { key: "ram", color: "#f0a33a", glow: "rgba(240,163,58,0.45)" },
-    { key: "gpu", color: "#3ec7ff", glow: "rgba(62,199,255,0.45)" },
-  ];
-  for (const s of series) {
-    const data = hist[s.key];
-    if (data.length < 2) continue;
-    ctx.beginPath();
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = 2.25;
-    ctx.shadowColor = s.glow;
-    ctx.shadowBlur = 10;
-    data.forEach((v, i) => {
-      const x = (i / (HISTORY - 1)) * (w - 4) + 2;
-      const y = h - (Math.min(100, v) / 100) * (h - 8) - 4;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+  const arc = el(`${kind}Arc`);
+  if (arc) {
+    const offset = ARC_LEN * (1 - Math.min(100, Math.max(0, pct)) / 100);
+    arc.style.stroke = tone.color;
+    arc.setAttribute("stroke-dashoffset", String(offset));
   }
+  if (el(`${kind}Val`)) el(`${kind}Val`).textContent = `${Math.round(pct)}%`;
+  if (el(`${kind}Name`)) el(`${kind}Name`).textContent = name || "—";
+  if (el(`${kind}Sub`)) el(`${kind}Sub`).textContent = sub || "—";
+  const temp = el(`${kind}Temp`);
+  if (temp) {
+    if (tempC != null && Number.isFinite(tempC)) {
+      temp.hidden = false;
+      temp.style.setProperty("--tc", tone.color);
+      const t = temp.querySelector(".t-txt");
+      if (t) t.textContent = `${Math.round(tempC)}°C`;
+    } else {
+      temp.hidden = true;
+    }
+  }
+  drawSpark(kind, hist[kind], tone.color);
 }
 
-function drawArea(canvas) {
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  const max = Math.max(1, ...hist.netUp, ...hist.netDown, 10);
-  function paint(data, top, bot) {
-    if (data.length < 2) return;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, top);
-    g.addColorStop(1, bot);
-    ctx.beginPath();
-    data.forEach((v, i) => {
-      const x = (i / Math.max(1, data.length - 1)) * w;
-      const y = h - (v / max) * (h * 0.85) - 4;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fillStyle = g;
-    ctx.fill();
-  }
-  paint(hist.netDown, "rgba(62,199,255,0.55)", "rgba(62,199,255,0.03)");
-  paint(hist.netUp, "rgba(224,53,69,0.5)", "rgba(224,53,69,0.03)");
-}
-
-function renderCores(perCore) {
-  const box = el("coreBars");
-  if (!box) return;
-  const n = (perCore && perCore.length) || 1;
-  while (box.children.length < n) box.appendChild(document.createElement("i"));
-  while (box.children.length > n) box.lastChild.remove();
-  [...box.children].forEach((node, i) => {
-    node.style.height = `${Math.max(6, perCore[i] ?? 0)}%`;
+function drawSpark(kind, data, color) {
+  const svg = el(`${kind}Spark`);
+  if (!svg || !data || data.length < 2) return;
+  const w = 120;
+  const h = 32;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - (Math.min(100, v) / 100) * (h - 4) - 2;
+    return [x, y];
   });
+  const ln = pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area =
+    `M0,${h} ` +
+    pts.map((p) => `L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ") +
+    ` L${w},${h} Z`;
+  const path = svg.querySelector(".area");
+  const poly = svg.querySelector(".ln");
+  if (path) {
+    path.setAttribute("d", area);
+    path.style.fill = color;
+  }
+  if (poly) {
+    poly.setAttribute("points", ln);
+    poly.style.stroke = color;
+  }
 }
 
-function diskKey(d) {
-  return (d.device || d.mount || "").replace(/\\+$/, "").toUpperCase();
-}
-
-function fillClass(pct) {
-  if (pct >= 90) return "c";
-  if (pct >= 75) return "w";
-  return "ok";
-}
-
-function pressureClass(pct) {
-  if (pct >= 90) return "crit";
-  if (pct >= 75) return "warn";
-  return "";
+function drawNetSpark() {
+  const svg = el("netSpark");
+  if (!svg) return;
+  const dn = hist.netDown;
+  const up = hist.netUp;
+  if (dn.length < 2) return;
+  const w = 120;
+  const h = 36;
+  const max = Math.max(1, ...dn, ...up, peakDn, peakUp);
+  function series(arr) {
+    return arr.map((v, i) => {
+      const x = (i / (arr.length - 1)) * w;
+      const y = h - (Math.min(max, v) / max) * (h - 4) - 2;
+      return [x, y];
+    });
+  }
+  const pd = series(dn);
+  const pu = series(up);
+  const area = (pts) =>
+    `M0,${h} ` + pts.map((p) => `L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ") + ` L${w},${h} Z`;
+  const ln = (pts) => pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  svg.querySelector(".area-dn")?.setAttribute("d", area(pd));
+  svg.querySelector(".ln-dn")?.setAttribute("points", ln(pd));
+  svg.querySelector(".area-up")?.setAttribute("d", area(pu));
+  svg.querySelector(".ln-up")?.setAttribute("points", ln(pu));
 }
 
 function renderDisks(disks) {
-  const box = el("diskCards");
-  const countEl = el("diskCount");
-  const list = Array.isArray(disks) ? disks : [];
-
-  if (countEl) {
-    const usb = list.filter((d) => d.removable).length;
-    countEl.innerHTML =
-      usb > 0
-        ? `<b>${list.length}</b> volumes · <b>${usb}</b> USB`
-        : `<b>${list.length}</b> volumes`;
-  }
-
-  if (!box) return;
-
-  if (!list.length) {
-    box.innerHTML = `<div class="disk-empty">Aucun volume détecté</div>`;
-    if (el("diskTopPct")) el("diskTopPct").textContent = "—";
+  const stack = el("diskStack");
+  const count = el("diskCount");
+  if (!stack) return;
+  const rows = Array.isArray(disks) ? disks : [];
+  if (count) count.textContent = `${rows.length} vol.`;
+  if (!rows.length) {
+    stack.innerHTML = `<div class="disk-empty">Aucun volume</div>`;
     return;
   }
-
-  box.innerHTML = list
+  stack.innerHTML = rows
+    .slice(0, 8)
     .map((d) => {
-      const pct = d.percent ?? d.pct ?? 0;
-      const key = diskKey(d);
-      const letter = (d.device || d.mount || "?").replace(/\\+$/, "");
-      const label = d.label && d.label !== letter ? d.label : d.fstype || "Volume";
-      const isUsb = !!d.removable || d.drive_type === "removable";
-      const isNet = d.drive_type === "network";
-      const badge = isUsb
-        ? `<span class="disk-badge usb">USB</span>`
-        : isNet
-          ? `<span class="disk-badge network">NET</span>`
-          : `<span class="disk-badge">${d.type_label || "Fixed"}</span>`;
-      const cardCls = [
-        "disk-card",
-        pressureClass(pct),
-        isUsb ? "usb" : "",
-        isNet ? "network" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-      const fill = fillClass(pct);
-      return `<article class="${cardCls}" data-disk="${esc(key)}">
-          <div class="disk-top">
-            <div>
-              <span class="disk-letter">${esc(letter)}</span>
-              <span class="disk-label" title="${esc(label)}">${esc(label)}</span>
-            </div>
-            ${badge}
-          </div>
-          <div class="disk-pct">${Math.round(pct)}%</div>
-          <div class="bar-track"><div class="bar-fill ${fill}" style="width:${pct}%"></div></div>
-          <div class="disk-meta">
-            <span><b>${d.used_gb ?? "—"}</b> / ${d.total_gb ?? "—"} GB</span>
-            <span>libre <b>${d.free_gb ?? "—"}</b> GB</span>
-          </div>
-        </article>`;
+      const pct = Math.round(d.percent ?? d.used_percent ?? 0);
+      let cls = "ok";
+      if (pct >= 90) cls = "crit";
+      else if (pct >= 75) cls = "warn";
+      if (d.bus === "USB" || d.kind === "removable") cls += " usb";
+      const letter = esc((d.device || d.mount || d.letter || "?").replace(/\\+$/, ""));
+      const title = esc(d.label || d.name || letter);
+      return `<div class="drow ${cls}"><span class="ltr">${letter}</span><div class="dbar" title="${title}"><i style="width:${pct}%"></i></div><span class="pct">${pct}%</span></div>`;
     })
     .join("");
-
-  const fixed = list.filter((d) => !d.removable);
-  const topSrc = fixed[0] || list[0];
-  const top = topSrc.percent ?? topSrc.pct ?? 0;
-  if (el("diskTopPct")) el("diskTopPct").textContent = `${Math.round(top)}%`;
-}
-
-function updateDensity(cpu, netDown) {
-  const density = el("densityMap");
-  if (!density) return;
-  const base = Math.min(1, (cpu / 100) * 0.55 + Math.min(netDown, 500) / 800);
-  for (let i = 0; i < density.children.length; i++) {
-    const jitter = 0.05 + Math.random() * 0.55;
-    density.children[i].style.setProperty("--o", String(Math.min(0.95, base * jitter + 0.05)));
-  }
 }
 
 function apply(data) {
@@ -400,51 +276,41 @@ function apply(data) {
   const ram = data.ram || {};
   const gpu = data.gpu || {};
   const load = data.load || {};
+  const cpuPct = Number(cpu.percent ?? load.score ?? 0);
+  const ramPct = Number(ram.percent ?? 0);
+  const gpuAvail = !!gpu.available;
+  const gpuPct = gpuAvail ? Number(gpu.load_percent ?? 0) : 0;
 
-  const cpuPct = cpu.percent ?? 0;
-  const loadScore = load.score ?? cpuPct;
-  const loadLabel = load.label || "—";
+  push("cpu", cpuPct);
+  push("ram", ramPct);
+  push("gpu", gpuPct);
 
-  if (el("cpuPct")) el("cpuPct").textContent = Math.round(loadScore);
-  const lvl = el("cpuLevel");
-  if (lvl) {
-    lvl.textContent = loadLabel;
-    lvl.className = "level " + levelClass(loadLabel);
-  }
-  setArc(loadScore);
-
-  if (el("cpuName")) el("cpuName").textContent = cpu.model || "CPU";
-  if (el("cpuCores")) el("cpuCores").textContent = `${cpu.cores_physical || "?"}p / ${cpu.cores_logical || "?"}t`;
-  if (el("cpuMhz")) el("cpuMhz").textContent = cpu.freq_mhz ? `${Math.round(cpu.freq_mhz)} MHz` : "—";
+  const cores = `${cpu.cores_physical || "?"}c / ${cpu.cores_logical || "?"}t`;
+  const loadLabel = (load.label || "").toUpperCase() || "—";
+  setGauge("cpu", cpuPct, cpu.model || "CPU", `${cores} · ${loadLabel}`, cpu.temp_c ?? cpu.temperature);
+  setGauge(
+    "ram",
+    ramPct,
+    `${ram.used_gb ?? "—"} / ${ram.total_gb ?? "—"} Go`,
+    "working set",
+    null
+  );
+  setGauge(
+    "gpu",
+    gpuPct,
+    gpu.name || "GPU",
+    gpuAvail
+      ? `VRAM ${gpu.memory_used_mb ?? "—"}/${gpu.memory_total_mb ?? "—"} MB`
+      : data.degraded?.gpu_note || "N/A",
+    gpu.temp_c ?? gpu.temperature
+  );
 
   if (el("procCount")) el("procCount").textContent = (data.procs ?? 0).toLocaleString("fr-FR");
   if (el("uptime")) el("uptime").textContent = fmtUptime(data.uptime_sec ?? 0);
   if (el("hostname")) el("hostname").textContent = data.hostname || "host";
-
-  if (el("ramUsed")) el("ramUsed").textContent = `${ram.used_gb ?? "—"} GB`;
-  if (el("ramTotal")) el("ramTotal").textContent = `/ ${ram.total_gb ?? "—"} GB`;
-  if (el("ramPctLabel")) el("ramPctLabel").textContent = `${Math.round(ram.percent ?? 0)}%`;
-
-  renderCores(cpu.per_core || []);
-
-  if (el("barCpu")) el("barCpu").style.width = `${cpuPct}%`;
-  if (el("barCpuT")) el("barCpuT").textContent = `${Math.round(cpuPct)}%`;
-  if (el("barRam")) el("barRam").style.width = `${ram.percent ?? 0}%`;
-  if (el("barRamT")) el("barRamT").textContent = `${Math.round(ram.percent ?? 0)}%`;
-
-  const gpuAvail = !!gpu.available;
-  const gpuPct = gpuAvail ? (gpu.load_percent ?? 0) : 0;
-  if (el("barGpu")) el("barGpu").style.width = `${gpuPct}%`;
-  if (el("barGpuT")) el("barGpuT").textContent = gpuAvail ? `${Math.round(gpuPct)}%` : "N/A";
-  if (el("gpuPctLabel")) el("gpuPctLabel").textContent = gpuAvail ? `${Math.round(gpuPct)}%` : "N/A";
-  if (el("gpuRing")) el("gpuRing").style.setProperty("--p", `${gpuPct}%`);
-  if (el("gpuRingVal")) el("gpuRingVal").textContent = gpuAvail ? Math.round(gpuPct) : "—";
-  if (el("gpuName")) el("gpuName").textContent = gpu.name || "GPU";
-  if (el("gpuVram")) {
-    el("gpuVram").textContent =
-      gpuAvail && gpu.memory_total_mb
-        ? `VRAM ${gpu.memory_used_mb}/${gpu.memory_total_mb} MB (${gpu.memory_percent}%)`
-        : data.degraded?.gpu_note || "VRAM n/d";
+  if (el("since")) {
+    const boot = data.boot_time || data.boot_iso || "";
+    el("since").textContent = boot ? `boot ${boot}` : (data.os || "—");
   }
 
   let downKb = 0;
@@ -458,24 +324,16 @@ function apply(data) {
   }
   lastNet = net;
   lastTs = ts;
-  if (el("netDown")) el("netDown").textContent = downKb.toFixed(1);
-  if (el("netUp")) el("netUp").textContent = upKb.toFixed(1);
-
-  push("cpu", cpuPct);
-  push("ram", ram.percent ?? 0);
-  push("gpu", gpuPct);
+  peakDn = Math.max(peakDn, downKb);
+  peakUp = Math.max(peakUp, upKb);
   push("netDown", downKb);
   push("netUp", upKb);
-
+  if (el("netDn")) el("netDn").textContent = downKb.toFixed(0);
+  if (el("netUp")) el("netUp").textContent = upKb.toFixed(0);
+  if (el("netPeak")) el("netPeak").textContent = `pic 60s · ↓ ${peakDn.toFixed(0)} · ↑ ${peakUp.toFixed(0)}`;
+  drawNetSpark();
   renderDisks(data.disk || []);
-  updateDensity(cpuPct, downKb);
-  drawHistory(el("histCanvas"));
-  drawArea(el("areaCanvas"));
 
-  if (el("osLine")) {
-    el("osLine").textContent = `${data.hostname || ""} · ${data.os || ""} · ${cpu.cores_logical || "?"} threads`;
-  }
-  if (el("statusDot")) el("statusDot").className = "dot";
   if (el("livePill")) {
     el("livePill").classList.remove("off");
     el("livePill").innerHTML = "<i></i> LIVE";
@@ -487,8 +345,6 @@ function offline() {
     el("livePill").classList.add("off");
     el("livePill").innerHTML = "<i></i> OFF";
   }
-  if (el("osLine")) el("osLine").textContent = "API metrics offline";
-  if (el("statusDot")) el("statusDot").className = "dot bad";
 }
 
 async function resolveMetricsUrl() {
@@ -524,17 +380,6 @@ function clock() {
   if (c) c.textContent = new Date().toLocaleTimeString("fr-FR", { hour12: false });
 }
 
-function initDensity() {
-  const density = el("densityMap");
-  if (!density || density.childElementCount) return;
-  for (let i = 0; i < 128; i++) {
-    const s = document.createElement("span");
-    if (i % 3 === 0) s.classList.add("cyan");
-    s.style.setProperty("--o", String(0.08 + Math.random() * 0.2));
-    density.appendChild(s);
-  }
-}
-
 async function mountTiles() {
   const a = api();
   let modules = [];
@@ -544,7 +389,6 @@ async function mountTiles() {
       modules = (res && res.modules) || [];
     }
   } catch (_) {}
-
   if (!modules.length) modules = FALLBACK_MODULES;
   else {
     modules = modules.map((m) => ({
@@ -553,20 +397,20 @@ async function mountTiles() {
       desc: m.desc || FALLBACK_MODULES.find((f) => f.id === m.id)?.desc || "",
     }));
   }
-
   const tiles = el("tileGrid");
   if (!tiles) return;
   tiles.innerHTML = modules
     .map(
       (m) => `
-      <button type="button" class="hub-tile" data-open="${esc(m.id)}">
-        <span class="hub-tile-ico" aria-hidden="true">${esc(m.ico || "▪")}</span>
+      <button type="button" class="tile" data-open="${esc(m.id)}">
+        <span class="tile-k">${esc(m.ico || "▪")}</span>
         <strong>${esc(m.label)}</strong>
-        <span>${esc(m.desc || "")}</span>
+        <span class="tile-b">${esc(m.desc || "")}</span>
+        <span class="go">Ouvrir →</span>
+        <span class="fil"></span>
       </button>`
     )
     .join("");
-
   tiles.addEventListener("click", (ev) => {
     const btn = ev.target.closest("[data-open]");
     if (!btn) return;
@@ -588,29 +432,20 @@ export function unmount() {
   metricsUrl = "";
   lastNet = null;
   lastTs = null;
+  peakDn = 0;
+  peakUp = 0;
   for (const k of Object.keys(hist)) hist[k] = [];
 }
 
 export async function mount(root) {
   unmount();
   root.innerHTML = metricsMarkup();
-  initDensity();
-
   const status = el("dashStatus");
-  metricsUrl = await resolveMetricsUrl();
-  if (metricsUrl) {
-    try {
-      window.PC_COMMAND_METRICS_URL = metricsUrl;
-    } catch (_) {}
-    if (status) status.textContent = "Lecture locale · métriques live · aucune donnée envoyée hors machine.";
-  } else if (status) {
-    status.textContent = "Serveur metrics indisponible — tuiles modules toujours accessibles.";
-  }
-
+  if (status) status.textContent = "Lecture locale · métriques live · aucune donnée envoyée hors machine.";
   await mountTiles();
-
   clock();
   clockTimer = setInterval(clock, 1000);
+  metricsUrl = await resolveMetricsUrl();
   await tick();
   tickTimer = setInterval(tick, 1000);
 }
