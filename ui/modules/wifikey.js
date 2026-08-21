@@ -11,7 +11,7 @@
 import { mountModuleShell, waitNs, esc } from "./_in_hub.js";
 
 export async function mount(root) {
-  const { body, setStatus, askConfirm } = mountModuleShell(root, {
+  const { body, setStatus, askConfirm, setSegment } = mountModuleShell(root, {
     title: "WifiKey",
     subtitle: "Profils WLAN et clés de sécurité — ConfirmGate",
     segments: [
@@ -171,4 +171,6 @@ export async function mount(root) {
     setStatus("");
     if (seg === "profiles") await buildProfiles();
   }
+
+  await setSegment("profiles");
 }

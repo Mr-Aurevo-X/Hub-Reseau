@@ -11,7 +11,7 @@
 import { mountModuleShell, waitNs, esc } from "./_in_hub.js";
 
 export async function mount(root) {
-  const { body, setStatus, askConfirm } = mountModuleShell(root, {
+  const { body, setStatus, askConfirm, setSegment } = mountModuleShell(root, {
     title: "NetAdmin",
     subtitle: "Adaptateurs · Hosts · Pare-feu",
     segments: [
@@ -332,4 +332,6 @@ export async function mount(root) {
     else if (seg === "hosts")    await buildHosts();
     else if (seg === "firewall") await buildFirewall();
   }
+
+  await setSegment("adapters");
 }
