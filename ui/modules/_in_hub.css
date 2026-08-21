@@ -37,6 +37,20 @@
   top: 0;
   z-index: 5;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  scrollbar-width: thin;
+}
+
+.hub-inhub .hub-seg-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .hub-inhub .hub-inhub-body {

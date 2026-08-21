@@ -148,6 +148,10 @@ export function mountModuleShell(root, opts) {
     const next = segments.find((s) => s.id === id)?.id || segments[0]?.id || "";
     current = next;
     renderSeg();
+    try {
+      const active = segEl?.querySelector(".hub-seg-btn.is-active");
+      active?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+    } catch (_) {}
     const hub = hubTitleApi();
     if (hub?.setSegmentTitle) {
       const label = segments.find((s) => s.id === current)?.label || current;

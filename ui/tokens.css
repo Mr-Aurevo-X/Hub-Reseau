@@ -9,35 +9,34 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg0: #06070c;
-  --bg1: #0e1118;
-  --bg2: #12161f;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --text: #eef2f8;
-  --muted: #8490a6;
+  --bg0: #030304;
+  --bg1: #0a0a0c;
+  --bg2: #101012;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #eef1f6;
+  --muted: #8b94a6;
   --accent: #e03545;
-  --accent-dim: rgba(224, 53, 69, 0.14);
-  --accent-glow: rgba(224, 53, 69, 0.28);
-  --warn: #f0a33a;
+  --accent-dim: rgba(224, 53, 69, 0.16);
+  --accent-glow: rgba(224, 53, 69, 0.42);
+  --warn: #e0a84a;
   --danger: #e03545;
   --ok: #3dd68c;
-  --info: #3ec7ff;
-  --card-hover: #1a1f2a;
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
-  --sidebar-bg: rgba(6, 7, 12, 0.88);
-  --bg-glow-a: rgba(224, 53, 69, 0.18);
-  --bg-glow-b: rgba(62, 199, 255, 0.1);
-  --bg-grad-top: #06070c;
-  --bg-grad-bot: #04050a;
-  /* PC Command kit aliases */
+  --info: #6a9bb8;
+  --card-hover: #16161a;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+  --sidebar-bg: rgba(3, 3, 4, 0.9);
+  --bg-glow-a: rgba(224, 53, 69, 0.2);
+  --bg-glow-b: rgba(106, 155, 184, 0.12);
+  --bg-grad-top: #030304;
+  --bg-grad-bot: #020203;
   --bg: var(--bg0);
   --panel: var(--bg1);
   --panel2: var(--bg2);
   --line: var(--border);
   --accent-soft: var(--accent-dim);
   --cyan: var(--info);
-  --cyan-soft: rgba(62, 199, 255, 0.12);
+  --cyan-soft: rgba(106, 155, 184, 0.12);
 }
 
 [data-theme="light"] {
@@ -73,7 +72,7 @@
 }
 
 :root {
-  --radius: 14px;
+  --radius: 10px;
   --radius-sm: 8px;
   --font: "Outfit", "Trebuchet MS", "Gill Sans", sans-serif;
   --mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
