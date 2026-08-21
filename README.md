@@ -45,7 +45,9 @@ Téléchargement : [Releases Hub-Reseau](https://github.com/Mr-Aurevo-X/Hub-Rese
 Lancer.cmd
 ```
 
-SmartScreen possible (binaires non signés). Titre : `PC Command | Network` / `[Module]`. Voir `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
+Windows peut afficher « potentiellement dangereux » : binaires **non signés** Authenticode (pas de certificat éditeur payant). C’est un avertissement **SmartScreen** (réputation), pas un verdict antivirus.
+
+Titre HWND : `PC Command | Network` / `[Module]`. Voir `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
 
 ---
 

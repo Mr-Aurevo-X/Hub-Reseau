@@ -45,7 +45,9 @@ Download: [Hub-Reseau Releases](https://github.com/Mr-Aurevo-X/Hub-Reseau/releas
 Lancer.cmd
 ```
 
-SmartScreen possible (unsigned binaries). Title: `PC Command | Network` / `[Module]`. See `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
+Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed (no paid publisher cert). That is a **SmartScreen** reputation warning, not an antivirus verdict.
+
+HWND title: `PC Command | Network` / `[Module]`. See `PRIVACY.md` · `ISOLATION.md` · `LICENSE`.
 
 ---
 
