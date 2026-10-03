@@ -39,7 +39,7 @@ Hub **Réseau** — adaptateurs, carte, trafic live, Wi‑Fi. Accueil débit / c
 | Préférences | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
 | Données Traffic | `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\` |
 
-[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · **v2.0.2**
+[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · **v2.0.3**
 
 ## Lancer
 
