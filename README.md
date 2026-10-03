@@ -1,4 +1,4 @@
-﻿[Français](README.md) · [English](README.en.md)
+[Français](README.md) · [English](README.en.md)
 
 # PC Command | Network
 
@@ -39,7 +39,7 @@ Hub **Réseau** — adaptateurs, carte, trafic live, Wi‑Fi. Accueil débit / c
 | Préférences | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
 | Données Traffic | `%LOCALAPPDATA%\Mr-Aurevo-X\RoadWay-X\` |
 
-[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · **v2.0.1**
+[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Reseau/releases) · **v2.0.2**
 
 ## Lancer
 
