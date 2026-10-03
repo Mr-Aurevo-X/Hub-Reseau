@@ -16,7 +16,6 @@ _BACKEND = Path(__file__).resolve().parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
-
 import csv
 import io
 import os
@@ -37,7 +36,6 @@ from tools.netmap.sitecheck import SiteCheckService
 from tools.wifikey import service as mod_wifi
 from security import ConfirmGate
 from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_language
-
 
 class NetAdminApi:
     """NetAdmin in-process — ConfirmGate on mutators."""
@@ -145,7 +143,6 @@ class NetAdminApi:
     def open_dedicated(self) -> dict:
         return launch_suite_app("NetAdmin")
 
-
 class WifiKeyApi:
     def __init__(self, gate: ConfirmGate) -> None:
         self._confirm = gate
@@ -174,7 +171,6 @@ class WifiKeyApi:
     def open_dedicated(self) -> dict:
         return launch_suite_app("WifiKey")
 
-
 def _fmt_addr(addr: Any) -> str:
     if not addr:
         return ""
@@ -186,7 +182,6 @@ def _fmt_addr(addr: Any) -> str:
     except (AttributeError, TypeError):
         return str(addr)
 
-
 def _proto_label(conn: Any) -> str:
     try:
         t = conn.type
@@ -197,7 +192,6 @@ def _proto_label(conn: Any) -> str:
     except (AttributeError, TypeError):
         pass
     return "?"
-
 
 class NetMapApi:
     """NetMap in-process + ConfirmGate on proxy env mutators."""
@@ -477,7 +471,6 @@ class NetMapApi:
     def open_dedicated(self) -> dict:
         return launch_suite_app("NetMap")
 
-
 HUB_TITLE = "PC Command | Network"
 HUB_ID = "reseau"
 _HUB_ROOT = _BACKEND.parent
@@ -524,7 +517,6 @@ class DashboardApi:
             return {"ok": False, "url": "", "error": "metrics offline"}
         return {"ok": True, "url": f"http://{host}:{port}/api/metrics"}
 
-
     def get_kpis(self) -> dict:
         base: dict[str, Any] = {"ok": True, "admin": is_admin(), "partial": False}
         try:
@@ -556,7 +548,6 @@ $tcp = @(Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue)
 
     def list_modules(self) -> dict:
         return {"ok": True, "modules": self._hub.module_catalog()}
-
 
 class Api(WindowChromeMixin):
     def __init__(self) -> None:
@@ -634,7 +625,6 @@ class Api(WindowChromeMixin):
     def is_admin(self) -> dict:
         return {"ok": True, "admin": is_admin()}
 
-
     def set_metrics_endpoint(self, host: str = "127.0.0.1", port: int = 0) -> dict:
         h = (host or "127.0.0.1").strip().lower()
         if h not in ("127.0.0.1", "localhost", "::1"):
@@ -663,6 +653,12 @@ class Api(WindowChromeMixin):
 
     def open_support_url(self, kind: str = "") -> dict:
         return hub_update.open_support_url(kind)
+
+    def list_crypto_donations(self) -> dict:
+        return hub_update.list_crypto_donations()
+
+    def copy_crypto_address(self, asset_id: str = "") -> dict:
+        return hub_update.copy_crypto_address(asset_id)
 
     def check_latest_release(self) -> dict:
         return hub_update.check_hub_release(HUB_ID, _HUB_ROOT)

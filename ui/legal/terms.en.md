@@ -32,7 +32,7 @@ Windows may flag the app as potentially unsafe: binaries are not Authenticode-si
 
 ## 5. Optional support
 
-Discord, PayPal, and Revolut links are **voluntary**. Donations are not a license fee and do not buy support, updates, or extra rights. Clicking those links leaves the local app.
+Discord and crypto tip links are **voluntary**. Donations are not a license fee and do not buy support, updates, or extra rights. Clicking those links leaves the local app.
 
 ## 6. Closed inner-source
 

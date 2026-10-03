@@ -7,7 +7,7 @@ There is **no** Mr-Aurevo-X backend and **no** telemetry.
 
 Outbound network (when it happens):
 - **Optional** read-only GitHub **Latest release** check (opt-out in About)
-- **Support links** (Discord / PayPal / Revolut) only when the user clicks
+- **Support links** (Discord / dons crypto) only when the user clicks
 - **Module actions the user starts**, for example:
   - hosts / URLs / targets **you enter** (ping, SiteCheck, DNS, etc.)
   - Traffic **reputation** lookups **only if you enable** that option

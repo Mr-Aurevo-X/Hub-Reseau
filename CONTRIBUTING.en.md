@@ -17,4 +17,4 @@ Dreamed by **Mr-Aurevo-X**. Cursor made the dream real.
 
 Optional support, your call:
 
-[Discord](https://discord.com/users/406891052516114442) · [PayPal](https://www.paypal.com/paypalme/aurevo1) · [Revolut](https://revolut.me/mr_aurevo_x)
+[Discord](https://discord.com/users/406891052516114442) · [Crypto tips](https://github.com/Mr-Aurevo-X#user-content-support)

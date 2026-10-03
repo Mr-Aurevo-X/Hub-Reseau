@@ -24,13 +24,13 @@ The Suite as a whole is **not** advertised as “100% local”: some modules can
 | Traffic reputation | Opt-in lookup | URLhaus / AbuseIPDB (plus browser links to VirusTotal / Talos) |
 | NetAdmin / NetMap tests | Diagnostics you start | Hosts **you** type |
 | Local metrics dashboard | Live KPIs on Accueil | `127.0.0.1` only |
-| Discord / PayPal / Revolut buttons | Optional contact or donation | Those operators’ sites and privacy policies |
+| Discord / dons crypto buttons | Optional contact or donation | Those operators’ sites and privacy policies |
 
 WifiKey shows keys already on the PC; they are not sent to Mr-Aurevo-X. Clipboard / cleanup / uninstall stay on local paths you confirm.
 
 ## 4. Support links
 
-Opening Discord, PayPal, or Revolut is a **user-initiated** navigation. Those services process data under their own policies. This is not Mr-Aurevo-X telemetry.
+Opening Discord is a **user-initiated** navigation under Discord’s policy. Crypto tip addresses are copied locally. This is not Mr-Aurevo-X telemetry.
 
 ## 5. Contact
 

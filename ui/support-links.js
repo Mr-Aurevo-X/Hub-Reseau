@@ -4,14 +4,13 @@
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  *
  * Optional support URLs (not a license fee). Forks must strip branding (TRADEMARK.md).
+ * Fiat (PayPal / Revolut) removed — crypto tips use MrAurevoXCrypto / bridge copy APIs.
  */
 (function (global) {
   "use strict";
 
   const SUPPORT_LINKS = {
     discord: "https://discord.com/users/406891052516114442",
-    paypal: "https://www.paypal.com/paypalme/aurevo1",
-    revolut: "https://revolut.me/mr_aurevo_x",
   };
 
   global.MrAurevoXSupport = {

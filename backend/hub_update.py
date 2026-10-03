@@ -28,17 +28,11 @@ _LOCK_TIMEOUT_S = 5.0
 
 SUPPORT_URLS: dict[str, str] = {
     "discord": "https://discord.com/users/406891052516114442",
-    "paypal": "https://www.paypal.com/paypalme/aurevo1",
-    "revolut": "https://revolut.me/mr_aurevo_x",
 }
-_ALLOWED_SUPPORT_HOSTS = frozenset(
-    {
-        "discord.com",
-        "www.paypal.com",
-        "paypal.com",
-        "revolut.me",
-    }
-)
+_ALLOWED_SUPPORT_HOSTS = frozenset({"discord.com"})
+
+_CRYPTO_JSON_NAME = "crypto_donations.json"
+_CRYPTO_CACHE: list[dict[str, Any]] | None = None
 
 HUB_INSTALL_DIR = "PCCommand"
 _LEGACY_HUB_INSTALL_DIRS = ("MrAurevoX",)
@@ -79,14 +73,11 @@ _ALLOWED_API_HOSTS = frozenset({"api.github.com"})
 _ALLOWED_RELEASE_HOSTS = frozenset({"github.com", "www.github.com"})
 _ALLOWED_RELEASE_ORGS = frozenset({"mr-aurevo-x"})
 
-
 def localappdata_root() -> Path:
     return Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local"))
 
-
 def user_settings_path() -> Path:
     return localappdata_root() / "Mr-Aurevo-X" / "user-settings.json"
-
 
 def read_user_settings() -> dict[str, Any]:
     path = user_settings_path()
@@ -98,7 +89,6 @@ def read_user_settings() -> dict[str, Any]:
         return {}
     return data if isinstance(data, dict) else {}
 
-
 def write_user_settings_merge(patch: dict[str, Any]) -> dict[str, Any]:
     """Merge keys into %LOCALAPPDATA%/Mr-Aurevo-X/user-settings.json (preserves accent/language)."""
     current = read_user_settings()
@@ -108,14 +98,12 @@ def write_user_settings_merge(patch: dict[str, Any]) -> dict[str, Any]:
     path.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return current
 
-
 def is_github_update_check_enabled() -> bool:
     """Default True — opt-out via user-settings.checkGithubUpdates = false."""
     val = read_user_settings().get("checkGithubUpdates")
     if val is None:
         return True
     return bool(val)
-
 
 def set_github_update_check(enabled: bool) -> dict[str, Any]:
     write_user_settings_merge({"checkGithubUpdates": bool(enabled)})
@@ -124,7 +112,6 @@ def set_github_update_check(enabled: bool) -> dict[str, Any]:
         "checkGithubUpdates": bool(enabled),
         "path": str(user_settings_path()),
     }
-
 
 def _user_desktop_dirs() -> list[Path]:
     """Possible Desktop folders (FR Bureau / EN Desktop / OneDrive)."""
@@ -143,7 +130,6 @@ def _user_desktop_dirs() -> list[Path]:
             out.append(p)
     return out
 
-
 def _user_downloads_dir() -> Path | None:
     home = Path.home()
     for name in ("Downloads", "Téléchargements", "Telechargements"):
@@ -151,7 +137,6 @@ def _user_downloads_dir() -> Path | None:
         if p.is_dir():
             return p
     return None
-
 
 def resolve_hub_exe_dir(hub_id: str | None = None) -> Path | None:
     """Folder that contains the shipped Launch-Hub-*.exe when known.
@@ -215,7 +200,6 @@ def resolve_hub_exe_dir(hub_id: str | None = None) -> Path | None:
             continue
     return None
 
-
 def about_local_paths(app_dir: Path, *, hub_id: str | None = None) -> dict[str, Any]:
     """Labeled absolute paths for About — uninstall / manual cleanup guidance.
 
@@ -271,16 +255,13 @@ def about_local_paths(app_dir: Path, *, hub_id: str | None = None) -> dict[str, 
 
     return {"ok": True, "hubId": hub_key or None, "paths": entries}
 
-
 def hub_install_dir_candidates() -> list[Path]:
     root = localappdata_root()
     names = [HUB_INSTALL_DIR, *_LEGACY_HUB_INSTALL_DIRS]
     return [root / name for name in names]
 
-
 def default_install_dir() -> Path:
     return hub_install_dir_candidates()[0]
-
 
 def normalize_version(raw: str | None) -> str:
     s = (raw or "").strip()
@@ -292,10 +273,8 @@ def normalize_version(raw: str | None) -> str:
         return f"v{s}"
     return s
 
-
 def format_version_bracket(version: str | None) -> str:
     return normalize_version(version) or ""
-
 
 def read_local_version(*search_roots: Path, pack_id: str | None = None) -> str | None:
     for root in search_roots:
@@ -339,7 +318,6 @@ def read_local_version(*search_roots: Path, pack_id: str | None = None) -> str |
                     pass
     return None
 
-
 def version_search_roots(app_dir: Path) -> list[Path]:
     roots: list[Path] = []
     install = default_install_dir()
@@ -354,15 +332,12 @@ def version_search_roots(app_dir: Path) -> list[Path]:
             roots.insert(0, exe_parent)
     return roots
 
-
 def get_local_suite_version(app_dir: Path) -> str | None:
     return read_local_version(*version_search_roots(app_dir))
-
 
 def normalize_hub_id(hub_id: str) -> str:
     hub_key = (hub_id or "").strip().lower().replace("hub-", "").replace("_", "-")
     return _HUB_ALIASES.get(hub_key, hub_key)
-
 
 def _version_tuple(raw: str | None) -> tuple[int, ...]:
     s = normalize_version(raw)
@@ -383,10 +358,8 @@ def _version_tuple(raw: str | None) -> tuple[int, ...]:
         parts.append(int(digits))
     return tuple(parts) if parts else (0,)
 
-
 def is_remote_newer(remote: str | None, local: str | None) -> bool:
     return _version_tuple(remote) > _version_tuple(local)
-
 
 def _assert_api_url(url: str) -> None:
     parsed = urllib.parse.urlparse(url)
@@ -395,7 +368,6 @@ def _assert_api_url(url: str) -> None:
     host = (parsed.hostname or "").lower()
     if host not in _ALLOWED_API_HOSTS:
         raise ValueError(f"host not allowlisted: {host!r}")
-
 
 def _api_latest_release(repo: str) -> dict[str, Any]:
     if repo not in set(HUB_GITHUB_REPOS.values()):
@@ -412,7 +384,6 @@ def _api_latest_release(repo: str) -> dict[str, Any]:
     )
     with urllib.request.urlopen(req, timeout=8) as resp:  # nosec B310
         return json.loads(resp.read().decode("utf-8"))
-
 
 def _release_payload(
     repo: str, release: dict[str, Any], asset_name: str | None
@@ -431,7 +402,6 @@ def _release_payload(
         "hasZip": has_zip,
         "asset": asset_name,
     }
-
 
 def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
     """Compare local version.json to GitHub Latest on this hub's own repo. Never downloads."""
@@ -505,7 +475,6 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
         ),
     }
 
-
 def open_release_url(url: str) -> dict[str, Any]:
     """Open an allowlisted Mr-Aurevo-X GitHub release page in the default browser."""
     raw = (url or "").strip()
@@ -526,10 +495,11 @@ def open_release_url(url: str) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc), "url": raw}
 
-
 def open_support_url(kind: str) -> dict[str, Any]:
-    """Open Discord / PayPal / Revolut in the default browser (allowlisted)."""
+    """Open Discord (allowlisted). Crypto tips use list/copy APIs, not a browser URL."""
     key = (kind or "").strip().lower()
+    if key == "crypto":
+        return {"ok": False, "error": "use list_crypto_donations / copy_crypto_address"}
     url = SUPPORT_URLS.get(key)
     if not url:
         return {"ok": False, "error": f"unknown support kind: {kind!r}"}
@@ -543,6 +513,146 @@ def open_support_url(kind: str) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc), "url": url}
 
+def _crypto_json_candidates() -> list[Path]:
+    here = Path(__file__).resolve().parent
+    return [
+        here / _CRYPTO_JSON_NAME,
+        here.parent / _CRYPTO_JSON_NAME,
+        Path(getattr(sys, "_MEIPASS", "")) / _CRYPTO_JSON_NAME
+        if getattr(sys, "_MEIPASS", None)
+        else Path(),
+    ]
+
+def load_crypto_donations() -> list[dict[str, Any]]:
+    """Load allowlisted crypto tip addresses from adjacent JSON (SoT sync)."""
+    global _CRYPTO_CACHE
+    if _CRYPTO_CACHE is not None:
+        return list(_CRYPTO_CACHE)
+    for path in _crypto_json_candidates():
+        if not path or not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        assets = data.get("assets") if isinstance(data, dict) else None
+        if not isinstance(assets, list):
+            continue
+        out: list[dict[str, Any]] = []
+        for row in assets:
+            if not isinstance(row, dict):
+                continue
+            aid = str(row.get("id") or "").strip().lower()
+            addr = str(row.get("address") or "").strip()
+            if not aid or not addr:
+                continue
+            item: dict[str, Any] = {
+                "id": aid,
+                "symbol": str(row.get("symbol") or "").strip(),
+                "name": str(row.get("name") or "").strip(),
+                "network": str(row.get("network") or "").strip(),
+                "address": addr,
+            }
+            note = str(row.get("note") or "").strip()
+            if note:
+                item["note"] = note
+            out.append(item)
+        if out:
+            _CRYPTO_CACHE = out
+            return list(out)
+    _CRYPTO_CACHE = []
+    return []
+
+def list_crypto_donations() -> dict[str, Any]:
+    assets = load_crypto_donations()
+    return {"ok": True, "assets": assets, "count": len(assets)}
+
+def _copy_text_windows(text: str) -> None:
+    """Copy unicode text to the Windows clipboard (no third-party dep)."""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+
+    user32.OpenClipboard.argtypes = [wintypes.HWND]
+    user32.OpenClipboard.restype = wintypes.BOOL
+    user32.EmptyClipboard.argtypes = []
+    user32.EmptyClipboard.restype = wintypes.BOOL
+    user32.CloseClipboard.argtypes = []
+    user32.CloseClipboard.restype = wintypes.BOOL
+    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    user32.SetClipboardData.restype = wintypes.HANDLE
+
+    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
+    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalLock.restype = ctypes.c_void_p
+    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalUnlock.restype = wintypes.BOOL
+    kernel32.GlobalFree.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalFree.restype = wintypes.HGLOBAL
+
+    if not user32.OpenClipboard(None):
+        raise OSError(f"OpenClipboard failed ({ctypes.get_last_error()})")
+    try:
+        if not user32.EmptyClipboard():
+            raise OSError(f"EmptyClipboard failed ({ctypes.get_last_error()})")
+        raw = text.encode("utf-16-le") + b"\x00\x00"
+        h_global = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(raw))
+        if not h_global:
+            raise OSError(f"GlobalAlloc failed ({ctypes.get_last_error()})")
+        locked = kernel32.GlobalLock(h_global)
+        if not locked:
+            kernel32.GlobalFree(h_global)
+            raise OSError(f"GlobalLock failed ({ctypes.get_last_error()})")
+        try:
+            ctypes.memmove(locked, raw, len(raw))
+        finally:
+            kernel32.GlobalUnlock(h_global)
+        if not user32.SetClipboardData(CF_UNICODETEXT, h_global):
+            kernel32.GlobalFree(h_global)
+            raise OSError(f"SetClipboardData failed ({ctypes.get_last_error()})")
+    finally:
+        user32.CloseClipboard()
+
+def copy_crypto_address(asset_id: str) -> dict[str, Any]:
+    """Copy a catalogued donation address to the clipboard. Never accepts raw addresses."""
+    key = (asset_id or "").strip().lower()
+    if not key:
+        return {"ok": False, "error": "missing asset id"}
+    match: dict[str, Any] | None = None
+    for row in load_crypto_donations():
+        if row.get("id") == key:
+            match = row
+            break
+    if not match:
+        return {"ok": False, "error": f"unknown asset: {asset_id!r}"}
+    address = str(match.get("address") or "")
+    if not address:
+        return {"ok": False, "error": "empty address"}
+    try:
+        if sys.platform.startswith("win"):
+            _copy_text_windows(address)
+        else:
+            # Non-Windows fallback for LocalCrypt / tests — prefer pyperclip if present.
+            try:
+                import pyperclip  # type: ignore[import-untyped]
+
+                pyperclip.copy(address)
+            except Exception as exc:  # noqa: BLE001
+                return {"ok": False, "error": str(exc), "asset": key}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "asset": key}
+    return {
+        "ok": True,
+        "asset": key,
+        "symbol": match.get("symbol"),
+        "network": match.get("network"),
+        "preview": address[:8] + "..." + address[-6:] if len(address) > 16 else address,
+    }
 
 def title_with_version(base_title: str, version: str | None, *, module: str | None = None) -> str:
     """Build HWND / tool-chrome title.
@@ -558,7 +668,6 @@ def title_with_version(base_title: str, version: str | None, *, module: str | No
     if ver:
         return f"{base} [{ver}]"
     return base
-
 
 @contextmanager
 def _version_lock(install_dir: Path) -> Iterator[None]:
@@ -593,7 +702,6 @@ def _version_lock(install_dir: Path) -> Iterator[None]:
             except OSError:
                 pass
         fh.close()
-
 
 def write_pack_stamp(
     install_dir: Path,

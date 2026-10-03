@@ -18,12 +18,12 @@ The Suite is not “100% local” as a whole: some modules use the network when 
 - Traffic reputation (opt-in): URLhaus / AbuseIPDB (+ VirusTotal / Talos links).
 - NetAdmin / NetMap tests: hosts you type.
 - Accueil metrics: 127.0.0.1 only.
-- Discord / PayPal / Revolut buttons: those operators’ sites.
+- Discord button: that operator’s site. Crypto tips: local address copy (no navigation).
 
 WifiKey shows keys already on the PC; they are not sent to Mr-Aurevo-X. Clipboard / cleanup / uninstall: local paths you confirm.
 
 4. Support links
-Opening Discord / PayPal / Revolut leaves the app. Those services’ privacy policies apply.
+Opening Discord leaves the app (Discord’s privacy policy). Crypto tips stay local (clipboard copy).
 
 5. Contact
 GitHub: https://github.com/Mr-Aurevo-X

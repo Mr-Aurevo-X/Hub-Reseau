@@ -32,7 +32,7 @@ Windows peut afficher « potentiellement dangereux » ou « Windows a protégé 
 
 ## 5. Soutien facultatif
 
-Liens Discord, PayPal, Revolut : **volontaires**. Un don n’est pas un prix de licence et n’achète ni support ni mises à jour. Un clic quitte l’application locale.
+Liens Discord, dons crypto : **volontaires**. Un don n’est pas un prix de licence et n’achète ni support ni mises à jour. Un clic quitte l’application locale.
 
 ## 6. Inner-source fermé
 

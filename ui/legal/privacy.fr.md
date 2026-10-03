@@ -18,12 +18,12 @@ La Suite n’est pas « 100 % locale » dans son ensemble : certains modules uti
 - Traffic réputation (opt-in) : URLhaus / AbuseIPDB (+ liens VirusTotal / Talos).
 - Tests NetAdmin / NetMap : hôtes que vous saisissez.
 - Métriques Accueil : 127.0.0.1 uniquement.
-- Boutons Discord / PayPal / Revolut : sites de ces opérateurs.
+- Bouton Discord : site de l’opérateur. Dons crypto : copie locale d’adresses (pas de navigation).
 
 WifiKey affiche des clés déjà présentes sur le PC ; elles ne partent pas vers Mr-Aurevo-X. Presse-papiers / nettoyage / désinstall : chemins locaux que vous validez.
 
 4. Liens de soutien
-Un clic Discord / PayPal / Revolut quitte l’app. Politiques de confidentialité de ces services.
+Un clic Discord quitte l’app (politique Discord). Les dons crypto restent locaux (copie presse-papiers).
 
 5. Contact
 GitHub : https://github.com/Mr-Aurevo-X

@@ -12,4 +12,4 @@ Hébergement des releases : GitHub (Microsoft)
 
 Logiciel fourni 100 % gratuitement pour un usage non commercial (LICENSE), sans mise à jour automatique et sans engagement de versions futures.
 
-Soutien facultatif (un clic quitte l’app) : Discord, PayPal, Revolut — voir README.
+Soutien facultatif : Discord (navigateur) · dons crypto (copie locale) — voir README.
